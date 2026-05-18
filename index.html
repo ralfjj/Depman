@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <meta name="color-scheme" content="light only"/>
-<title>DepMan v0.26</title>
+<title>DepMan v0.27</title>
 <meta name="theme-color" content="#111111"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -518,7 +518,7 @@ button,input,textarea{font-family:var(--font);font-size:inherit}
   <div id="ob-step-landing" class="ob-step active">
     <div class="ob-clap">
       <div class="ob-title">DepMan</div>
-      <div class="ob-sub">v0.26 — Production management on your device</div>
+      <div class="ob-sub">v0.27 — Production management on your device</div>
     </div>
     <div class="ob-body">
       <div class="ob-landing-hero">
@@ -900,7 +900,7 @@ button,input,textarea{font-family:var(--font);font-size:inherit}
       </div>
     </div>
 
-    <div style="padding:16px 14px;font-size:10px;font-family:var(--mono);opacity:0.3;text-align:center">DepMan v0.26</div>
+    <div style="padding:16px 14px;font-size:10px;font-family:var(--mono);opacity:0.3;text-align:center">DepMan v0.27</div>
   </div>
 
 </div>
@@ -2897,7 +2897,7 @@ async function callGemini(parts, maxTokens=8000){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         contents:[{parts}],
-        generationConfig:{maxOutputTokens:maxTokens, temperature:0.1}
+        generationConfig:{maxOutputTokens:maxTokens, temperature:0.1, responseMimeType:'application/json'}
       })
     });
     if(resp.status===503||resp.status===429||resp.status===500){
@@ -2979,12 +2979,31 @@ Extract ALL items from this breakdown into JSON only. No markdown, no explanatio
 Tags: hero=story-critical/multiple-versions, animal=live animal, sfx=special effect, fab=needs fabrication, consumable=food/drink/disposable.
 Extract EVERY SINGLE item. Be exhaustive. Consolidate duplicates (same item multiple scenes = one entry with scenes array).`};
 
-    const bdData = await callClaude([{role:'user',content:[bdPart, bdPrompt]}], 8000);
+    const bdData = await callClaude([{role:'user',content:[bdPart, bdPrompt]}], 16000);
     const bdRaw  = bdData.content.map(c=>c.text||'').join('');
     const bdClean= bdRaw.replace(/^```json\s*/,'').replace(/^```/,'').replace(/```$/,'').trim();
     let bdParsed;
     try{ bdParsed=JSON.parse(bdClean); }
-    catch(e){ const m=bdRaw.match(/\{[\s\S]*\}/); if(m)bdParsed=JSON.parse(m[0]); else throw new Error('Could not parse breakdown response'); }
+    catch(e1){
+      // Try to extract JSON object
+      try{
+        const m=bdRaw.match(/\{[\s\S]*\}/);
+        if(m) bdParsed=JSON.parse(m[0]);
+        else throw new Error('no JSON object found');
+      }catch(e2){
+        // Try to fix truncated JSON by finding last complete prop entry
+        try{
+          let fixed = bdClean;
+          // Remove trailing incomplete entry and close the arrays/object
+          fixed = fixed.replace(/,\s*\{[^}]*$/, '');  // remove last incomplete object
+          if(!fixed.endsWith(']')) fixed += ']';
+          if(!fixed.endsWith('}')) fixed += '}';
+          bdParsed = JSON.parse(fixed);
+        }catch(e3){
+          throw new Error('JSON Parse error: '+e1.message);
+        }
+      }
+    }
 
     obLog(`Breakdown: ${(bdParsed.props||[]).length} items, ${Object.keys(bdParsed.scenes||{}).length} scenes`,'ok');
 
@@ -3141,7 +3160,7 @@ function downloadApp(){
     const blob = new Blob([src], {type:'text/html'});
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href = url; a.download = 'DepMan_v26.html';
+    a.href = url; a.download = 'DepMan_v27.html';
     document.body.appendChild(a); a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
