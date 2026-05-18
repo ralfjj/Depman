@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <meta name="color-scheme" content="light only"/>
-<title>DepMan v0.23</title>
+<title>DepMan v0.24</title>
 <meta name="theme-color" content="#111111"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -518,7 +518,7 @@ button,input,textarea{font-family:var(--font);font-size:inherit}
   <div id="ob-step-landing" class="ob-step active">
     <div class="ob-clap">
       <div class="ob-title">DepMan</div>
-      <div class="ob-sub">v0.23 — Production management on your device</div>
+      <div class="ob-sub">v0.24 — Production management on your device</div>
     </div>
     <div class="ob-body">
       <div class="ob-landing-hero">
@@ -900,7 +900,7 @@ button,input,textarea{font-family:var(--font);font-size:inherit}
       </div>
     </div>
 
-    <div style="padding:16px 14px;font-size:10px;font-family:var(--mono);opacity:0.3;text-align:center">DepMan v0.23</div>
+    <div style="padding:16px 14px;font-size:10px;font-family:var(--mono);opacity:0.3;text-align:center">DepMan v0.24</div>
   </div>
 
 </div>
@@ -2888,7 +2888,7 @@ function obSetupDropzone(type){
 
 // Gemini API — free tier, reads PDFs natively
 const GEMINI_KEY = 'AIzaSyAKPY0ua_kM5EZ4xBuW-8983pHTI8Bfr5U';
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 async function callGemini(parts, maxTokens=8000){
   for(let attempt=1; attempt<=3; attempt++){
@@ -3141,7 +3141,7 @@ function downloadApp(){
     const blob = new Blob([src], {type:'text/html'});
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href = url; a.download = 'DepMan_v23.html';
+    a.href = url; a.download = 'DepMan_v24.html';
     document.body.appendChild(a); a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
