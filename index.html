@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <meta name="color-scheme" content="light only"/>
-<title>DepMan v0.21</title>
+<title>DepMan v0.22</title>
 <meta name="theme-color" content="#111111"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -518,7 +518,7 @@ button,input,textarea{font-family:var(--font);font-size:inherit}
   <div id="ob-step-landing" class="ob-step active">
     <div class="ob-clap">
       <div class="ob-title">DepMan</div>
-      <div class="ob-sub">v0.21 — Production management on your device</div>
+      <div class="ob-sub">v0.22 — Production management on your device</div>
     </div>
     <div class="ob-body">
       <div class="ob-landing-hero">
@@ -900,7 +900,7 @@ button,input,textarea{font-family:var(--font);font-size:inherit}
       </div>
     </div>
 
-    <div style="padding:16px 14px;font-size:10px;font-family:var(--mono);opacity:0.3;text-align:center">DepMan v0.21</div>
+    <div style="padding:16px 14px;font-size:10px;font-family:var(--mono);opacity:0.3;text-align:center">DepMan v0.22</div>
   </div>
 
 </div>
@@ -2841,6 +2841,16 @@ function obShowStep(step){
   document.querySelectorAll('.ob-step').forEach(s=>s.classList.remove('active'));
   const el = document.getElementById('ob-step-'+step);
   if(el){ el.classList.add('active'); el.scrollTop=0; }
+  // Reset parsing screen when going back
+  if(step==='upload'){
+    const log = document.getElementById('ob-parse-log');
+    if(log) log.innerHTML='';
+    const retryBtn = document.getElementById('ob-retry-btn');
+    if(retryBtn) retryBtn.remove();
+    const spinner = document.getElementById('ob-spinner');
+    if(spinner) spinner.style.display='block';
+    document.getElementById('ob-parse-title').textContent='Reading files…';
+  }
 }
 
 function obLog(msg, type='working'){
@@ -2890,12 +2900,17 @@ async function callGemini(parts, maxTokens=8000){
         generationConfig:{maxOutputTokens:maxTokens, temperature:0.1}
       })
     });
-    if(resp.status===503||resp.status===429){
-      obLog(`API busy, retrying (${attempt}/3)…`,'working');
-      await new Promise(r=>setTimeout(r, 3000*attempt));
+    if(resp.status===503||resp.status===429||resp.status===500){
+      const wait = attempt===1 ? 8000 : attempt===2 ? 15000 : 25000;
+      obLog(`API busy, retrying (${attempt}/3) — waiting ${wait/1000}s…`,'working');
+      await new Promise(r=>setTimeout(r, wait));
       continue;
     }
-    if(!resp.ok){ const e=await resp.json(); throw new Error(e.error?.message||'API error '+resp.status); }
+    if(!resp.ok){ 
+      let msg = 'API error '+resp.status;
+      try{ const e=await resp.json(); msg=e.error?.message||e.message||msg; }catch(x){}
+      throw new Error(msg); 
+    }
     const data = await resp.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   }
@@ -3059,11 +3074,13 @@ Return JSON only: {"heroItems":["exact item name as in breakdown","another item"
   }catch(e){
     obLog('Error: '+e.message,'err');
     document.getElementById('ob-parse-title').textContent='Something went wrong';
-    document.getElementById('ob-spinner').style.display='none';
-    const retry=document.createElement('button');
-    retry.className='ob-btn'; retry.style.marginTop='16px'; retry.textContent='← Back to upload';
-    retry.addEventListener('click',()=>obShowStep('upload'));
-    document.querySelector('#ob-step-parsing .ob-body').appendChild(retry);
+    const sp=document.getElementById('ob-spinner'); if(sp)sp.style.display='none';
+    if(!document.getElementById('ob-retry-btn')){
+      const retry=document.createElement('button');
+      retry.id='ob-retry-btn'; retry.className='ob-btn'; retry.style.marginTop='16px'; retry.textContent='← Back to upload';
+      retry.addEventListener('click',()=>obShowStep('upload'));
+      document.querySelector('#ob-step-parsing .ob-body').appendChild(retry);
+    }
   }
 }
 
@@ -3124,7 +3141,7 @@ function downloadApp(){
     const blob = new Blob([src], {type:'text/html'});
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href = url; a.download = 'DepMan_v21.html';
+    a.href = url; a.download = 'DepMan_v22.html';
     document.body.appendChild(a); a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
