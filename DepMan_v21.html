@@ -1,0 +1,3576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="color-scheme" content="light only"/>
+<title>DepMan v0.21</title>
+<meta name="theme-color" content="#111111"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="apple-mobile-web-app-title" content="DepMan"/>
+<link rel="manifest" id="pwa-manifest"/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;500;700&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  color-scheme:light only;
+  --black:#000;--white:#fff;--yellow:#f5d300;--yellow-dark:#c49a00;
+  --red:#c0392b;--green:#1a7a4a;--blue:#003d8b;--grey:#999;
+  --border:1px solid #000;--radius:10px;--font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+html,body{background:#fff;font-family:var(--font);color:#000;font-size:16px;overflow-x:hidden}
+button,input,textarea{font-family:var(--font);font-size:inherit}
+
+/* LAYOUT */
+#app{max-width:430px;margin:0 auto;min-height:100vh;padding-bottom:80px;position:relative}
+
+/* CLAP HEADER */
+.clap{background:#111;padding:14px 16px 16px;position:relative;overflow:hidden}
+.clap::before{content:"";position:absolute;top:0;left:0;right:0;height:12px;background:repeating-linear-gradient(115deg,#000 0 16px,var(--yellow) 16px 32px)}
+.clap-body{margin-top:12px}
+.clap-label{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--yellow);text-transform:uppercase;display:block;margin-bottom:4px}
+.clap-title{font-size:20px;font-weight:700;color:#fff;line-height:1.1}
+.clap-meta{font-size:11px;color:#fff;opacity:0.6;margin-top:4px;font-family:var(--mono)}
+.sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--yellow);margin-right:5px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.sync-dot.error{background:var(--red);animation:none}
+.sync-dot.ok{background:var(--green);animation:none}
+.sync-dot.offline{background:var(--grey);animation:none}
+.sync-btn{background:transparent;border:1px solid rgba(255,255,255,0.3);color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;padding:4px 9px;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s}
+.sync-btn:hover:not(:disabled){background:rgba(255,255,255,0.15)}
+.sync-btn:disabled{opacity:0.4;cursor:default}
+
+/* BOTTOM NAV */
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;border-top:2px solid #000;display:flex;z-index:100}
+.nav-btn{flex:1;background:#fff;border:none;border-right:1px solid #000;color:#000;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:10px 4px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--mono)}
+.nav-btn:last-child{border-right:none}
+.nav-btn.active{background:#000;color:#fff}
+.nav-btn:hover:not(.active){background:#f5f5f5}
+.nav-icon{font-size:16px;line-height:1}
+
+/* SCREENS */
+.screen{display:none;padding:0}
+.screen.active{display:block}
+
+/* SEARCH */
+.search-wrap{padding:12px 14px 0}
+.search{width:100%;border:var(--border);border-radius:var(--radius);padding:10px 12px;font-size:13px;background:#fff;color:#000;outline:none}
+.search:focus{border-width:2px}
+.search::placeholder{color:#000;opacity:0.35}
+
+/* FILTER ROW */
+.filter-row{display:flex;gap:6px;padding:10px 14px;overflow-x:auto;scrollbar-width:none}
+.filter-row::-webkit-scrollbar{display:none}
+.filter-btn{background:#fff;border:var(--border);color:#000;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 11px;border-radius:20px;cursor:pointer;font-weight:700;white-space:nowrap;font-family:var(--mono)}
+.filter-btn.active{background:#000;color:#fff}
+
+
+/* ACTION ROW */
+.action-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 12px}
+.action-btn{background:#fff;border:var(--border);color:#000;padding:9px;border-radius:var(--radius);font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-weight:700;font-family:var(--mono)}
+
+.action-btn.renameable{color:#000;background:#fff}
+.action-btn.yellow{background:var(--yellow);border-color:var(--yellow-dark)}
+.action-btn.yellow:hover{background:var(--yellow-dark)}
+
+/* BUCKET */
+.bucket{border:var(--border);border-radius:var(--radius);margin:0 14px 10px;overflow:hidden}
+.bucket.drag-over{border-color:var(--yellow-dark);border-width:2px;background:#fffdf0}
+.bucket-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:#f5f5f5;cursor:pointer;user-select:none}
+.bucket.open .bucket-head{border-bottom:var(--border)}
+.bucket-left{display:flex;align-items:center;gap:10px}
+.bdot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,0.2)}
+.bdot.warehouse{background:var(--grey)}
+.bdot.van{background:var(--yellow-dark)}
+.bdot.set{background:var(--red)}
+.bdot.completed{background:var(--green)}
+.bucket-name{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-family:var(--mono)}
+.bucket-right{display:flex;align-items:center;gap:8px}
+.bcount{font-size:11px;font-weight:700;background:#fff;border:var(--border);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
+.bchev{font-size:9px;transition:transform 0.15s}
+.bucket.open .bchev{transform:rotate(90deg)}
+.bucket-body{display:none;max-height:380px;overflow-y:auto}
+.bucket.open .bucket-body{display:block}
+.bucket-empty{padding:14px;color:#000;opacity:0.3;font-size:12px;font-style:italic;text-align:center}
+
+/* PROP ITEM (home) */
+.prop-item{display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid #eee;cursor:grab;transition:background 0.1s;position:relative}
+.prop-item:last-child{border-bottom:none}
+.prop-item:hover{background:#fafafa}
+.prop-item.dragging{opacity:0.3}
+.grip{color:#000;opacity:0.15;font-size:13px;flex-shrink:0}
+.prop-info{flex:1;min-width:0}
+.prop-name-text{font-size:13px;font-weight:500;color:#000;line-height:1.3;word-break:break-word}
+.prop-sub-text{font-size:10px;color:#000;opacity:0.4;margin-top:2px;font-family:var(--mono)}
+.prop-tags{display:flex;gap:4px;flex-shrink:0;align-items:center}
+.ptag{font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;border:1px solid;text-transform:uppercase;font-family:var(--mono)}
+.ptag.hero{border-color:var(--yellow-dark);color:var(--yellow-dark);background:#fffaea}
+.ptag.animal{border-color:#2a6a00;color:#2a6a00;background:#efffea}
+.ptag.sfx{border-color:#8b2500;color:#8b2500;background:#fff0eb}
+.ptag.fab{border-color:var(--blue);color:var(--blue);background:#ebf1ff}
+.ptag.consumable{border-color:#7a5500;color:#7a5500;background:#fffaea}
+.star{color:var(--yellow-dark);font-size:11px;font-weight:700;flex-shrink:0}
+
+/* TODAY SCREEN */
+.day-nav{display:flex;align-items:center;justify-content:space-between;margin:12px 14px 0;border:var(--border);border-radius:var(--radius);padding:8px 10px;background:#f5f5f5}
+.dnav-btn{background:#fff;border:var(--border);color:#000;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700}
+.dnav-btn:hover:not(:disabled){background:#000;color:#fff}
+.dnav-btn:disabled{opacity:0.2;cursor:not-allowed}
+.dnav-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center;font-family:var(--mono)}
+.dnav-sub{font-size:10px;opacity:0.5;text-align:center;margin-top:2px;font-family:var(--mono)}
+
+/* Calendar */
+.cal-toggle{width:calc(100% - 28px);margin:4px 14px 0;background:#fff;border:var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);color:#000;font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:700;padding:6px;cursor:pointer;font-family:var(--mono)}
+.cal-toggle:hover{background:#f5f5f5}
+.cal-wrap{margin:0 14px 10px;border:var(--border);border-radius:var(--radius);overflow:hidden}
+.cal-month{display:flex;align-items:center;justify-content:space-between;background:#f5f5f5;padding:8px 12px;border-bottom:var(--border)}
+.cal-month-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-family:var(--mono)}
+.cal-month-btn{background:#fff;border:var(--border);color:#000;width:26px;height:26px;border-radius:4px;cursor:pointer;font-weight:700;font-size:12px}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-dow{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#000;opacity:0.35;text-align:center;padding:6px 0;border-bottom:1px solid #eee;font-family:var(--mono)}
+.cal-cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border:0.5px solid #eee;padding:2px;cursor:default}
+.cal-cell.shoot{cursor:pointer;background:#fff}
+.cal-cell.shoot:hover{background:#f5f5f5}
+.cal-cell.active-sd{background:#000;color:#fff}
+.cal-cell.empty{background:#fafafa}
+.cal-date{font-size:10px;font-weight:700;line-height:1;font-family:var(--mono)}
+.cal-sd{font-size:7px;font-weight:700;color:var(--yellow-dark);line-height:1;margin-top:2px;font-family:var(--mono)}
+.cal-cell.active-sd .cal-sd{color:var(--yellow)}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px 0}
+.stat-card{background:#f5f5f5;border:var(--border);border-radius:var(--radius);padding:10px 12px}
+.stat-label{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;opacity:0.45;margin-bottom:4px;font-family:var(--mono)}
+.stat-num{font-size:18px;font-weight:700;font-family:var(--mono)}
+.stat-total{font-size:11px;font-weight:400;opacity:0.4}
+.sbar{height:3px;background:#ddd;border-radius:2px;overflow:hidden;margin-top:6px}
+.sbar-fill{height:100%;transition:width 0.3s}
+.sbar-fill.packed{background:var(--green)}
+.sbar-fill.loc{background:var(--yellow-dark)}
+
+/* Scene blocks */
+.scene-block{border:var(--border);border-radius:var(--radius);margin:10px 14px 0;overflow:hidden}
+.scene-block.all-ready{border-color:var(--green);border-width:2px}
+.scene-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#f5f5f5;cursor:pointer;user-select:none}
+.scene-block.open .scene-head{border-bottom:var(--border)}
+.scene-num{font-size:10px;font-weight:700;background:var(--yellow);color:#000;padding:2px 7px;border-radius:4px;flex-shrink:0;font-family:var(--mono)}
+.scene-info{flex:1;padding:0 10px;min-width:0}
+.scene-loc-text{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scene-year{font-size:10px;opacity:0.4;margin-top:1px;font-family:var(--mono)}
+.scene-count{font-size:11px;font-family:var(--mono)}
+.scene-count .done{color:var(--green);font-weight:700}
+.scene-body{display:none;padding:0 0 4px}
+.scene-block.open .scene-body{display:block}
+
+/* Prop row (today) */
+.tprop{display:flex;align-items:flex-start;gap:9px;padding:10px 12px;border-top:1px solid #eee;cursor:pointer;transition:background 0.1s}
+.tprop:hover{background:#fafafa}
+.tprop.packed .tprop-name{opacity:0.3;text-decoration:line-through}
+.tchk{width:18px;height:18px;border:2px solid #000;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;background:#fff;transition:all 0.15s}
+.tprop.packed .tchk{background:var(--green);border-color:var(--green)}
+.tprop.packed .tchk::after{content:"";width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-2px}
+.tprop-main{flex:1;min-width:0}
+.tprop-name{font-size:13px;color:#000;line-height:1.35;word-break:break-word}
+.tprop-row2{display:flex;align-items:center;gap:5px;margin-top:5px;flex-wrap:wrap}
+.loc-chip{display:inline-flex;align-items:center;gap:4px;background:#fff;border:var(--border);color:#000;font-size:9px;letter-spacing:0.8px;text-transform:uppercase;padding:2px 7px 2px 5px;border-radius:10px;cursor:pointer;font-weight:700;font-family:var(--mono)}
+
+.ldot{width:6px;height:6px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,0.15);display:inline-block}
+.ldot.warehouse{background:var(--grey)}
+.ldot.van{background:var(--yellow-dark)}
+.ldot.set{background:var(--red)}
+.ldot.completed{background:var(--green)}
+.ldot.fab{background:var(--blue)}
+
+/* HERO SCREEN */
+.hero-card{border:var(--border);border-radius:var(--radius);margin:0 14px 10px;overflow:hidden}
+.hero-head{display:flex;align-items:flex-start;justify-content:space-between;padding:12px 14px;background:#f5f5f5;cursor:pointer;user-select:none;gap:10px}
+.hero-card.open .hero-head{border-bottom:var(--border)}
+.hero-title{font-size:14px;font-weight:700;color:#000;line-height:1.3;outline:none;border:none;background:transparent;width:100%;cursor:text;pointer-events:auto}
+.hero-title:focus{background:#fffaea;border-radius:3px;padding:1px 4px}
+.hero-sub{font-size:11px;opacity:0.5;margin-top:2px;outline:none;border:none;background:transparent;width:100%;cursor:text;font-family:var(--mono);line-height:1.4;pointer-events:auto}
+.hero-sub:focus{background:#fffaea;border-radius:3px;padding:1px 4px;opacity:1}
+.hero-card.open .hero-head .bchev{transform:rotate(90deg)}
+.hero-head-left{flex:1;min-width:0}
+.hero-star-label{font-size:10px;color:var(--yellow-dark);font-weight:700;margin-bottom:3px;font-family:var(--mono)}
+.today-badge{font-size:8px;font-weight:700;background:var(--yellow);color:#000;padding:2px 5px;border-radius:3px;margin-left:5px;font-family:var(--mono)}
+.hero-body{display:none;border-top:var(--border)}
+.hero-card.open .hero-body{display:block}
+.hsection{padding:10px 14px;border-bottom:1px solid #eee}
+.hsection:last-child{border-bottom:none}
+.hsection-title{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;opacity:0.4;margin-bottom:8px;font-family:var(--mono)}
+.ver-row{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0}
+.ver-row:last-child{border-bottom:none}
+.ver-tag{font-size:9px;font-weight:700;background:var(--yellow);color:#000;padding:2px 6px;border-radius:4px;flex-shrink:0;margin-top:2px;font-family:var(--mono)}
+.ver-info{flex:1;min-width:0}
+.ver-name{font-size:12px;font-weight:700;outline:none;border:none;background:transparent;width:100%;cursor:text;font-family:var(--font)}
+.ver-name:focus{background:#fffaea;border-radius:3px;padding:1px 4px}
+.ver-desc{font-size:10px;opacity:0.55;margin-top:1px;outline:none;border:none;background:transparent;width:100%;cursor:text;font-family:var(--mono);line-height:1.4}
+.ver-desc:focus{background:#fffaea;border-radius:3px;padding:1px 4px;opacity:1}
+.scene-pills{display:flex;flex-wrap:wrap;gap:4px}
+.spill{font-size:9px;font-weight:700;background:#f5f5f5;border:1px solid #ccc;color:#000;padding:2px 6px;border-radius:3px;font-family:var(--mono)}
+.spill.today{background:var(--yellow);border-color:var(--yellow-dark)}
+.note-area{width:100%;border:none;background:#fffaea;font-family:var(--font);font-size:12px;color:#000;line-height:1.6;padding:8px;resize:none;outline:none;min-height:50px;border-radius:4px}
+.fab-area{width:100%;border:none;background:#ebf1ff;font-family:var(--font);font-size:12px;color:#000;line-height:1.6;padding:8px;resize:none;outline:none;min-height:50px;border-radius:4px}
+.haction-row{display:flex;gap:6px;padding:10px 14px;background:#fafafa;border-top:1px solid #eee}
+.haction-btn{flex:1;background:#fff;border:var(--border);color:#000;padding:8px;border-radius:var(--radius);font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-weight:700;font-family:var(--mono)}
+
+
+/* CAST SCREEN */
+.cast-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 14px 0}
+.cast-btn{background:#fff;border:var(--border);color:#000;padding:12px 10px;border-radius:var(--radius);cursor:pointer;text-align:left;transition:background 0.1s}
+.cast-btn:hover{background:#f5f5f5}
+.cast-btn.active{background:#000;color:#fff}
+.cnum{font-size:9px;font-weight:700;background:var(--yellow);color:#000;padding:1px 5px;border-radius:3px;display:inline-block;margin-bottom:4px;font-family:var(--mono)}
+.cname{font-size:13px;font-weight:700;line-height:1.2}
+.cactor{font-size:10px;opacity:0.5;margin-top:2px;font-family:var(--mono)}
+.cast-btn.active .cactor{opacity:0.6}
+.char-view{margin:0 14px}
+.back-btn{background:#fff;border:var(--border);color:#000;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:7px 12px;border-radius:var(--radius);cursor:pointer;font-weight:700;margin:10px 14px 8px;display:block;font-family:var(--mono)}
+
+.char-header{border:var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:10px}
+.char-head-top{background:#f5f5f5;padding:12px 14px;border-bottom:var(--border)}
+.char-stats{display:flex;gap:6px;margin-top:8px}
+.cstat{background:#fff;border:var(--border);border-radius:8px;padding:6px 10px;flex:1;text-align:center}
+.cstat-num{font-size:15px;font-weight:700;font-family:var(--mono)}
+.cstat-label{font-size:8px;opacity:0.45;text-transform:uppercase;letter-spacing:1px;font-family:var(--mono)}
+.cprop-list{border:var(--border);border-radius:var(--radius);overflow:hidden}
+.cprop-header{background:#f5f5f5;padding:8px 14px;border-bottom:var(--border);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;opacity:0.45;font-family:var(--mono)}
+.cprop-row{display:flex;align-items:flex-start;gap:9px;padding:10px 14px;border-bottom:1px solid #eee;transition:background 0.1s}
+.cprop-row:last-child{border-bottom:none}
+.cprop-row:hover{background:#fafafa}
+.cprop-row.packed .cprop-name{opacity:0.3;text-decoration:line-through}
+.cprop-main{flex:1;min-width:0}
+.cprop-name{font-size:13px;color:#000;line-height:1.3;outline:none;border:none;background:transparent;width:100%;cursor:text;font-family:var(--font)}
+.cprop-name:focus{background:#fffaea;border-radius:3px;padding:1px 4px}
+.cprop-row2{display:flex;align-items:center;gap:5px;margin-top:5px;flex-wrap:wrap}
+.add-btn{width:100%;background:#fff;border:1px dashed #000;color:#000;padding:10px;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--mono)}
+.add-btn:hover{background:#f5f5f5}
+.del-btn{background:transparent;border:none;color:#000;opacity:0.2;cursor:pointer;font-size:14px;padding:2px;flex-shrink:0;line-height:1}
+.del-btn:hover{opacity:1;color:var(--red)}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+.modal{background:#fff;border:2px solid #000;border-radius:var(--radius);padding:16px;width:100%;max-width:320px}
+.modal-title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;opacity:0.45;margin-bottom:4px;font-family:var(--mono)}
+.modal-name{font-size:13px;font-weight:700;margin-bottom:14px;line-height:1.4}
+.modal-opts{display:flex;flex-direction:column;gap:6px}
+.modal-opt{display:flex;align-items:center;gap:10px;background:#fff;border:var(--border);color:#000;padding:11px 12px;border-radius:var(--radius);font-size:13px;cursor:pointer;font-weight:500}
+
+.modal-opt.active{border-width:2px;border-color:var(--green);font-weight:700}
+.modal-opt.active::after{content:"✓";margin-left:auto;color:var(--green)}
+.modal-sep{height:1px;background:#eee;margin:6px 0}
+.modal-del{width:100%;background:#fff;border:1px solid var(--red);color:var(--red);padding:10px;border-radius:var(--radius);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-weight:700;margin-top:6px;font-family:var(--mono)}
+.modal-del:hover{background:var(--red);color:#fff}
+.modal-cancel{width:100%;background:#fff;border:var(--border);color:#000;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:9px;cursor:pointer;font-weight:700;border-radius:var(--radius);margin-top:6px;font-family:var(--mono)}
+
+
+/* EDIT MODAL */
+.edit-input{width:100%;border:var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--font);color:#000;outline:none;margin-bottom:8px;background:#fff}
+.edit-input:focus{border-width:2px}
+.edit-label{font-size:9px;letter-spacing:1px;text-transform:uppercase;font-weight:700;opacity:0.45;margin-bottom:4px;font-family:var(--mono);display:block}
+
+/* TOAST */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:9px 18px;border-radius:20px;font-size:12px;font-weight:700;font-family:var(--mono);z-index:300;pointer-events:none;opacity:0;transition:opacity 0.2s}
+.toast.show{opacity:1}
+
+/* ADD PROP MODAL */
+.add-prop-form{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+
+.screen-pad{padding-top:10px;padding-bottom:100px}
+
+/* ── PHOTO THUMB on prop row ── */
+.prop-photo-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid #eee;flex-shrink:0;cursor:pointer}
+.prop-photo-btn{width:36px;height:36px;border-radius:6px;border:1px dashed #ccc;background:#fafafa;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:14px;color:#ccc;transition:all 0.15s}
+.prop-photo-btn:hover{border-color:#000;color:#000;background:#f0f0f0}
+
+/* ── PHOTO PANEL (hidden under prop row) ── */
+.prop-photo-panel{display:none;padding:10px 14px 12px;background:#fafafa;border-top:1px solid #eee}
+.prop-photo-panel.open{display:block}
+.photo-panel-img{width:100%;max-height:220px;object-fit:cover;border-radius:8px;border:var(--border);display:block;cursor:pointer}
+.photo-panel-actions{display:flex;gap:8px;margin-top:8px}
+.photo-action-btn{flex:1;background:#fff;border:var(--border);color:#000;padding:8px;border-radius:8px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:var(--mono);display:flex;align-items:center;justify-content:center;gap:5px}
+
+.photo-action-btn.danger{border-color:var(--red);color:var(--red)}
+.photo-action-btn.danger:hover{background:var(--red);color:#fff}
+.photo-file-input{display:none}
+
+/* ── GALLERY SCREEN ── */
+#screen-gallery{padding-bottom:100px}
+.gallery-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:2px}
+.gallery-cell{aspect-ratio:1;overflow:hidden;position:relative;cursor:pointer;background:#f0f0f0}
+.gallery-cell img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity 0.15s}
+.gallery-cell:hover img{opacity:0.85}
+.gallery-cell-name{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));padding:4px 5px 5px;font-size:8px;font-weight:700;color:#fff;font-family:var(--mono);letter-spacing:0.3px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gallery-empty{padding:60px 20px;text-align:center;opacity:0.3;font-size:12px;font-family:var(--mono)}
+
+/* ── SCRIPT VIEWER ── */
+#screen-script{background:#fff;padding-bottom:80px}
+.script-upload-zone{margin:16px;border:2px dashed #ccc;border-radius:var(--radius);padding:32px 20px;text-align:center;cursor:pointer;transition:border-color 0.15s}
+.script-upload-zone:hover,.script-upload-zone.dragover{border-color:#000}
+.script-upload-zone.has-file{border-color:var(--green);border-style:solid;background:#f0fff4}
+.script-upload-icon{font-size:32px;margin-bottom:10px;opacity:0.4}
+.script-upload-zone.has-file .script-upload-icon{opacity:1}
+.script-upload-label{font-size:12px;font-weight:700;font-family:var(--mono);opacity:0.5;letter-spacing:0.5px}
+.script-upload-zone.has-file .script-upload-label{opacity:1;color:var(--green)}
+.script-upload-hint{font-size:10px;opacity:0.3;font-family:var(--mono);margin-top:4px}
+
+/* toolbar */
+.script-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:var(--border);background:#fff;position:sticky;top:0;z-index:10}
+.script-tb-btn{background:#fff;border:var(--border);color:#000;width:32px;height:32px;border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700}
+.sc-tool-btn.active{background:#000;color:#fff}
+.script-page-info{font-size:11px;font-family:var(--mono);flex:1;text-align:center;font-weight:700}
+.script-tb-search{flex:1;border:var(--border);border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--mono);outline:none;min-width:0}
+.script-tb-search:focus{border-width:2px}
+
+/* canvas area */
+.script-canvas-wrap{overflow:hidden;background:#888;position:relative;touch-action:pinch-zoom pan-y}
+.script-canvas-wrap canvas{display:block;margin:0 auto;max-width:100%;cursor:grab;touch-action:pinch-zoom pan-y}
+.script-canvas-wrap canvas:active{cursor:grabbing}
+
+/* page strip */
+.script-page-strip{display:flex;gap:6px;padding:8px 12px;overflow-x:auto;border-top:var(--border);scrollbar-width:none;background:#f5f5f5}
+.script-page-strip::-webkit-scrollbar{display:none}
+.script-strip-thumb{width:36px;height:48px;border:1px solid #ccc;border-radius:3px;flex-shrink:0;cursor:pointer;overflow:hidden;background:#fff}
+.script-strip-thumb.active{border:2px solid #000}
+.script-strip-thumb canvas{width:100%;height:100%}
+
+/* search results overlay */
+.script-search-results{position:absolute;top:40px;left:0;right:0;background:#fff;border-bottom:var(--border);max-height:200px;overflow-y:auto;z-index:20}
+.script-search-result{padding:8px 12px;border-bottom:1px solid #eee;cursor:pointer;font-size:11px;font-family:var(--mono)}
+.script-search-result:hover{background:#fafafa}
+.script-search-result .sr-page{font-weight:700;margin-right:8px}
+.script-search-result .sr-text{opacity:0.6}
+
+/* scene jump pill */
+.scene-script-link{cursor:pointer;text-decoration:underline;text-decoration-color:var(--yellow-dark);text-underline-offset:2px}
+/* ── ONBOARDING ── */
+#onboard-wrapper{display:block}
+#onboard-wrapper.hidden{display:none}
+#onboard-overlay{background:#fff;max-width:430px;margin:0 auto}
+#onboard-overlay.hidden{display:none}
+#onboard-overlay.hidden{display:none}
+.ob-clap{background:#111;padding:14px 16px 20px;position:relative;overflow:hidden;flex-shrink:0}
+.ob-clap::before{content:"";position:absolute;top:0;left:0;right:0;height:12px;background:repeating-linear-gradient(115deg,#000 0 16px,var(--yellow) 16px 32px)}
+.ob-title{font-size:22px;font-weight:700;color:#fff;line-height:1.1;margin-top:12px}
+.ob-sub{font-size:11px;color:#fff;opacity:0.5;margin-top:4px;font-family:var(--mono)}
+.ob-body{padding:20px 16px}
+.ob-step{display:none}.ob-step.active{display:block}
+.ob-step-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;font-weight:700;opacity:0.35;font-family:var(--mono);margin-bottom:16px}
+
+/* upload cards */
+.ob-upload-card{border:var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.ob-upload-head{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f5f5f5;border-bottom:var(--border)}
+.ob-upload-icon{width:34px;height:34px;background:#000;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;color:#fff}
+.ob-upload-info{flex:1;min-width:0}
+.ob-upload-title{font-size:13px;font-weight:700}
+.ob-upload-sub{font-size:10px;opacity:0.4;font-family:var(--mono);margin-top:1px}
+.ob-upload-badge{font-size:9px;font-weight:700;font-family:var(--mono);flex-shrink:0;padding:3px 7px;border-radius:4px;border:var(--border)}
+.ob-upload-badge.ready{color:var(--green);border-color:var(--green)}
+.ob-upload-badge.optional{opacity:0.35}
+.ob-drop{margin:10px;border:2px dashed #ddd;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:all 0.15s}
+.ob-drop:hover,.ob-drop.over{border-color:#000}
+.ob-drop.done{border-color:var(--green);border-style:solid;background:#f0fff4}
+.ob-drop-lbl{font-size:11px;font-weight:700;font-family:var(--mono);opacity:0.4;margin-top:4px}
+.ob-drop.done .ob-drop-lbl{opacity:1;color:var(--green)}
+
+/* department grid */
+.ob-dept-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.ob-dept-btn{border:var(--border);border-radius:var(--radius);padding:14px 10px;cursor:pointer;text-align:left;background:#fff;transition:all 0.12s;display:flex;flex-direction:column;gap:4px}
+.ob-dept-btn:hover{background:#fafafa}
+.ob-dept-btn.selected{border:2px solid #000;background:#000;color:#fff}
+.ob-dept-icon{font-size:20px}
+.ob-dept-name{font-size:13px;font-weight:700;line-height:1.2}
+.ob-dept-desc{font-size:9px;opacity:0.5;font-family:var(--mono);line-height:1.4}
+.ob-dept-btn.selected .ob-dept-desc{opacity:0.6}
+
+/* parsing screen */
+.ob-parse-spinner{width:44px;height:44px;border:3px solid #eee;border-top-color:#000;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+.ob-parse-log{border:var(--border);border-radius:var(--radius);padding:10px 12px;font-family:var(--mono);font-size:10px;line-height:1.8;min-height:160px;max-height:280px;overflow-y:auto;background:#f9f9f9;margin-top:12px}
+.ob-log-line{display:flex;gap:6px}
+.ob-log-line.ok .ob-log-dot{color:var(--green)}
+.ob-log-line.err .ob-log-dot{color:var(--red)}
+.ob-log-line.working .ob-log-dot{color:#888;animation:pulse 1s infinite}
+
+/* bottom action */
+.ob-action{padding:16px 16px 32px}
+.ob-btn{display:block;width:100%;background:#000;color:#fff;border:none;padding:15px;border-radius:var(--radius);font-size:13px;font-weight:700;font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:opacity 0.15s;text-align:center}
+.ob-btn:disabled{opacity:0.2;cursor:default}
+.ob-btn-sec{display:block;width:100%;background:#fff;color:#000;border:var(--border);padding:11px;border-radius:var(--radius);font-size:11px;font-weight:700;font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-top:8px;text-align:center}
+.ob-note{font-size:10px;color:#000;opacity:0.35;text-align:center;margin-top:10px;font-family:var(--mono);line-height:1.5}
+
+/* landing */
+.ob-landing-hero{text-align:center;padding:32px 20px 24px}
+.ob-landing-icon{font-size:52px;margin-bottom:12px}
+.ob-landing-title{font-size:26px;font-weight:700;margin-bottom:6px}
+.ob-landing-sub{font-size:13px;opacity:0.45;font-family:var(--mono);line-height:1.6}
+
+/* ── SETTINGS / QR ── */
+#screen-settings{padding-bottom:100px}
+.settings-section{margin:10px 14px 0;border:var(--border);border-radius:var(--radius);overflow:hidden}
+.settings-section-head{background:#f5f5f5;padding:10px 14px;border-bottom:var(--border)}
+.settings-section-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;font-weight:700;opacity:0.4;font-family:var(--mono)}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #eee;gap:10px}
+.settings-row:last-child{border-bottom:none}
+.settings-row-label{font-size:13px;font-weight:500}
+.settings-row-sub{font-size:10px;opacity:0.4;font-family:var(--mono);margin-top:2px}
+.settings-row-val{font-size:12px;font-family:var(--mono);opacity:0.6;text-align:right;flex-shrink:0}
+.settings-btn{background:#fff;border:var(--border);color:#000;font-size:10px;font-weight:700;font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;padding:6px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+
+/* QR modal */
+.qr-modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:400;padding:24px}
+.qr-modal.hidden{display:none}
+.qr-card{background:#fff;border-radius:16px;padding:24px 20px;width:100%;max-width:320px;text-align:center}
+.qr-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.qr-sub{font-size:10px;font-family:var(--mono);opacity:0.45;margin-bottom:20px;line-height:1.5}
+.qr-canvas-wrap{background:#fff;padding:12px;border:var(--border);border-radius:10px;display:inline-block;margin-bottom:16px}
+.qr-code-text{font-size:13px;font-weight:700;font-family:var(--mono);letter-spacing:2px;background:#f5f5f5;border:var(--border);border-radius:6px;padding:8px 12px;margin-bottom:16px;word-break:break-all}
+.qr-actions{display:flex;gap:8px}
+.qr-action-btn{flex:1;background:#000;color:#fff;border:none;padding:11px;border-radius:8px;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;letter-spacing:0.5px}
+.qr-close-btn{flex:1;background:#fff;color:#000;border:var(--border);padding:11px;border-radius:8px;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer}
+
+/* join screen */
+.join-screen{position:fixed;inset:0;background:#fff;z-index:450;display:flex;flex-direction:column;max-width:430px;margin:0 auto}
+.join-screen.hidden{display:none}
+.ob-features{margin:0 0 20px}
+.ob-feature{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #eee;font-size:12px;line-height:1.5}
+.ob-feature:last-child{border-bottom:none}
+.ob-feature-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+
+/* ── CALLSHEET CALENDAR ── */
+#screen-cal{padding-bottom:100px}
+.cal-screen-header{padding:10px 14px 0}
+.cal-month-nav{display:flex;align-items:center;justify-content:space-between;margin:0 14px 10px;border:var(--border);border-radius:var(--radius);padding:8px 12px;background:#f5f5f5}
+.cal-month-title{font-size:13px;font-weight:700;font-family:var(--mono)}
+.cal-month-arrow{background:#fff;border:var(--border);color:#000;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin:0 14px;border:var(--border);border-radius:var(--radius);overflow:hidden;background:#eee}
+.cal-dow{background:#f5f5f5;text-align:center;font-size:8px;font-weight:700;letter-spacing:1px;padding:5px 0;font-family:var(--mono)}
+.cal-cell-wrap{background:#fff;min-height:52px;padding:3px;cursor:pointer;position:relative}
+.cal-cell-wrap:hover{background:#fafafa}
+.cal-cell-wrap.today-cell{background:#fffdf0}
+.cal-cell-wrap.other-month{opacity:0.25}
+.cal-date-num{font-size:10px;font-weight:700;font-family:var(--mono);line-height:1}
+.cal-sd-badge{display:inline-block;background:#000;color:#fff;font-size:7px;font-weight:700;font-family:var(--mono);padding:1px 4px;border-radius:3px;margin-top:2px}
+.cal-has-callsheet{width:6px;height:6px;background:var(--yellow-dark);border-radius:50%;position:absolute;top:3px;right:3px}
+.cal-cell-wrap.has-cs .cal-date-num{color:var(--green)}
+
+/* day detail panel */
+.cal-day-panel{margin:10px 14px 0;border:var(--border);border-radius:var(--radius);overflow:hidden;display:none}
+.cal-day-panel.open{display:block}
+.cal-day-panel-head{background:#f5f5f5;padding:11px 14px;border-bottom:var(--border);display:flex;align-items:center;justify-content:space-between}
+.cal-day-panel-title{font-size:13px;font-weight:700}
+.cal-day-panel-sub{font-size:10px;font-family:var(--mono);opacity:0.5;margin-top:2px}
+.cal-day-panel-close{background:#fff;border:var(--border);color:#000;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:12px}
+.cal-day-body{padding:12px 14px}
+
+/* callsheet info blocks */
+.cs-block{margin-bottom:14px}
+.cs-block:last-child{margin-bottom:0}
+.cs-block-title{font-size:8px;letter-spacing:2px;text-transform:uppercase;font-weight:700;opacity:0.4;font-family:var(--mono);margin-bottom:6px}
+.cs-row{display:flex;gap:6px;align-items:baseline;margin-bottom:3px;font-size:12px;line-height:1.4}
+.cs-row-label{font-size:9px;font-family:var(--mono);opacity:0.45;width:64px;flex-shrink:0;text-transform:uppercase}
+.cs-row-val{font-weight:500;flex:1}
+.cs-tag{display:inline-block;border:var(--border);font-size:9px;font-family:var(--mono);font-weight:700;padding:2px 6px;border-radius:4px;margin:2px 3px 2px 0;text-transform:uppercase}
+.cs-tag.extras{border-color:#555;color:#555}
+.cs-tag.animals{border-color:#2a6a00;color:#2a6a00}
+.cs-tag.sfx{border-color:#8b2500;color:#8b2500}
+.cs-tag.weather{border-color:var(--blue);color:var(--blue)}
+.cs-scenes-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.cs-scene-chip{background:#f5f5f5;border:var(--border);font-size:10px;font-family:var(--mono);font-weight:700;padding:3px 7px;border-radius:4px}
+
+/* upload callsheet button */
+.cs-upload-btn{display:flex;align-items:center;gap:8px;border:1px dashed #ccc;border-radius:var(--radius);padding:12px 14px;cursor:pointer;margin-bottom:10px;background:#fff;width:100%;text-align:left}
+.cs-upload-btn:hover{border-color:#000}
+.cs-upload-icon{font-size:18px;opacity:0.5}
+.cs-upload-text{font-size:11px;font-family:var(--mono);font-weight:700;opacity:0.5}
+
+/* parsing spinner inline */
+.cs-parsing{display:flex;align-items:center;gap:10px;padding:10px 0;font-size:11px;font-family:var(--mono);opacity:0.6}
+.cs-spinner{width:16px;height:16px;border:2px solid #eee;border-top-color:#000;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0}
+
+/* ── LIGHTBOX ── */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.lightbox.hidden{display:none}
+.lightbox-img{max-width:100%;max-height:calc(100vh - 120px);object-fit:contain;border-radius:4px}
+.lightbox-name{color:#fff;font-size:12px;font-family:var(--mono);margin-top:12px;opacity:0.7;text-align:center;padding:0 20px}
+.lightbox-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.lightbox-close:hover{background:rgba(255,255,255,0.3)}
+
+/* ── RENAMEABLE ── */
+.renameable{cursor:pointer;-webkit-user-select:none;user-select:none;position:relative}
+
+.renameable:active{opacity:0.7}
+.rename-hint{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:#fff;font-size:10px;font-family:var(--mono);padding:6px 12px;border-radius:20px;pointer-events:none;opacity:0;transition:opacity 0.2s;z-index:250;white-space:nowrap}
+.rename-hint.show{opacity:1}
+/* inline edit input that appears in-place */
+.rename-input{font-family:inherit;font-size:inherit;font-weight:inherit;letter-spacing:inherit;text-transform:inherit;background:var(--yellow);color:#000;border:none;outline:none;padding:1px 4px;border-radius:3px;min-width:40px;max-width:160px;text-align:center}
+
+
+</style>
+</head>
+<body>
+<div id="onboard-wrapper"><div id="onboard-overlay">
+
+  <!-- ── STEP: LANDING ── -->
+  <div id="ob-step-landing" class="ob-step active">
+    <div class="ob-clap">
+      <div class="ob-title">DepMan</div>
+      <div class="ob-sub">v0.21 — Production management on your device</div>
+    </div>
+    <div class="ob-body">
+      <div class="ob-landing-hero">
+        <div class="ob-landing-icon">🎬</div>
+        <div class="ob-landing-title">DepMan</div>
+        <div class="ob-landing-sub">Upload your script, breakdown &amp; schedule.<br>AI populates your department workspace.</div>
+      </div>
+      <div class="ob-features">
+        <div class="ob-feature"><span class="ob-feature-icon">📋</span><span>Every department — Props, Costume, Make-up, Locations, Art, SFX</span></div>
+        <div class="ob-feature"><span class="ob-feature-icon">🤖</span><span>AI reads your breakdown and auto-populates the item list</span></div>
+        <div class="ob-feature"><span class="ob-feature-icon">✈️</span><span>Runs fully offline — syncs to your team only when you choose</span></div>
+        <div class="ob-feature"><span class="ob-feature-icon">🔒</span><span>Script stays on your device — never stored on any server</span></div>
+      </div>
+    </div>
+    <div class="ob-action">
+      <button class="ob-btn" id="ob-landing-start">Get started →</button>
+      <div class="ob-note" style="margin-top:12px">
+        <span style="text-decoration:underline;cursor:pointer;opacity:0.6" id="ob-landing-download">How to install as an app ↓</span>
+        <div id="ob-install-instructions" style="display:none;margin-top:12px;text-align:left;background:#f5f5f5;border-radius:8px;padding:12px;font-size:11px;line-height:1.8;font-family:var(--mono)">
+          <strong style="font-size:12px">📱 iPhone &amp; iPad</strong><br>
+          1. Tap <strong>Share ↑</strong> in Safari toolbar<br>
+          2. Tap <strong>Add to Home Screen</strong><br>
+          3. Tap <strong>Add</strong> — done ✓<br>
+          <span style="opacity:0.45">Chrome: tap ⋯ → Add to Home Screen</span><br><br>
+          <strong style="font-size:12px">🤖 Android</strong><br>
+          1. Tap ⋮ in Chrome<br>
+          2. Tap <strong>Add to Home screen</strong><br>
+          <span style="opacity:0.45">Or tap the Install banner at the bottom</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP: PRODUCTION INFO ── -->
+  <div id="ob-step-info" class="ob-step">
+    <div class="ob-clap">
+      <div class="ob-title">Your Production</div>
+      <div class="ob-sub">Step 1 of 3</div>
+    </div>
+    <div class="ob-body">
+      <div class="ob-step-label">Production details</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+        <div>
+          <div style="font-size:10px;font-family:var(--mono);font-weight:700;opacity:0.4;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px">Production Title *</div>
+          <input id="ob-title" style="width:100%;border:2px solid #000;border-radius:var(--radius);padding:11px 12px;font-size:15px;font-family:var(--font);outline:none" placeholder="e.g. Die Hellen Tage"/>
+        </div>
+        <div>
+          <div style="font-size:10px;font-family:var(--mono);font-weight:700;opacity:0.4;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px">Director</div>
+          <input id="ob-director" style="width:100%;border:var(--border);border-radius:var(--radius);padding:11px 12px;font-size:14px;font-family:var(--font);outline:none" placeholder="Director name"/>
+        </div>
+        <div>
+          <div style="font-size:10px;font-family:var(--mono);font-weight:700;opacity:0.4;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px">Your Name</div>
+          <input id="ob-username" style="width:100%;border:var(--border);border-radius:var(--radius);padding:11px 12px;font-size:14px;font-family:var(--font);outline:none" placeholder="e.g. Ralf"/>
+        </div>
+      </div>
+    </div>
+    <div class="ob-action">
+      <button class="ob-btn" id="ob-info-next" disabled>Next →</button>
+      <button class="ob-btn-sec" id="ob-info-back">← Back</button>
+    </div>
+  </div>
+
+  <!-- ── STEP: DEPARTMENT ── -->
+  <div id="ob-step-dept" class="ob-step">
+    <div class="ob-clap">
+      <div class="ob-title">Your Department</div>
+      <div class="ob-sub">Step 2 of 3</div>
+    </div>
+    <div class="ob-body">
+      <div class="ob-step-label">Choose your department</div>
+      <div class="ob-dept-grid">
+        <button class="ob-dept-btn selected" data-dept="Props"><div class="ob-dept-icon">🎭</div><div class="ob-dept-name">Props</div><div class="ob-dept-desc">Items, hero props, continuity</div></button>
+        <button class="ob-dept-btn" data-dept="Costume"><div class="ob-dept-icon">👗</div><div class="ob-dept-name">Costume</div><div class="ob-dept-desc">Wardrobe per character</div></button>
+        <button class="ob-dept-btn" data-dept="Make-up"><div class="ob-dept-icon">💄</div><div class="ob-dept-name">Make-up</div><div class="ob-dept-desc">Continuity, special effects</div></button>
+        <button class="ob-dept-btn" data-dept="Locations"><div class="ob-dept-icon">📍</div><div class="ob-dept-name">Locations</div><div class="ob-dept-desc">Permits, dressing, access</div></button>
+        <button class="ob-dept-btn" data-dept="Art Dept"><div class="ob-dept-icon">🖼</div><div class="ob-dept-name">Art Dept</div><div class="ob-dept-desc">Sets, builds, graphics</div></button>
+        <button class="ob-dept-btn" data-dept="SFX"><div class="ob-dept-icon">💥</div><div class="ob-dept-name">SFX</div><div class="ob-dept-desc">Practical effects, rigs</div></button>
+      </div>
+    </div>
+    <div class="ob-action">
+      <button class="ob-btn" id="ob-dept-next">Next →</button>
+      <button class="ob-btn-sec" id="ob-dept-back">← Back</button>
+    </div>
+  </div>
+
+  <!-- ── STEP: UPLOAD FILES ── -->
+  <div id="ob-step-upload" class="ob-step">
+    <div class="ob-clap">
+      <div class="ob-title">Upload Files</div>
+      <div class="ob-sub">Step 3 of 3 · Stays on your device</div>
+    </div>
+    <div class="ob-body">
+      <div class="ob-step-label">Breakdown required — script &amp; schedule optional</div>
+      <div class="ob-upload-card">
+        <div class="ob-upload-head">
+          <div class="ob-upload-icon">🗂</div>
+          <div class="ob-upload-info"><div class="ob-upload-title">Breakdown</div><div class="ob-upload-sub">PDF or Excel · scene-by-scene item list</div></div>
+          <div class="ob-upload-badge optional" id="ob-badge-breakdown">Required</div>
+        </div>
+        <div class="ob-drop" id="ob-drop-breakdown"><div style="font-size:22px;opacity:0.3">⬆</div><div class="ob-drop-lbl" id="ob-lbl-breakdown">Tap to upload</div></div>
+        <input type="file" id="ob-input-breakdown" accept=".pdf,.xlsx,.xls,application/pdf" style="display:none"/>
+      </div>
+      <div class="ob-upload-card">
+        <div class="ob-upload-head">
+          <div class="ob-upload-icon">📄</div>
+          <div class="ob-upload-info"><div class="ob-upload-title">Script</div><div class="ob-upload-sub">PDF · scene context + hero identification</div></div>
+          <div class="ob-upload-badge optional" id="ob-badge-script">Optional</div>
+        </div>
+        <div class="ob-drop" id="ob-drop-script"><div style="font-size:22px;opacity:0.3">⬆</div><div class="ob-drop-lbl" id="ob-lbl-script">Tap to upload</div></div>
+        <input type="file" id="ob-input-script" accept=".pdf,application/pdf" style="display:none"/>
+      </div>
+      <div class="ob-upload-card">
+        <div class="ob-upload-head">
+          <div class="ob-upload-icon">📅</div>
+          <div class="ob-upload-info"><div class="ob-upload-title">Schedule</div><div class="ob-upload-sub">PDF or Excel · shoot days + locations</div></div>
+          <div class="ob-upload-badge optional" id="ob-badge-schedule">Optional</div>
+        </div>
+        <div class="ob-drop" id="ob-drop-schedule"><div style="font-size:22px;opacity:0.3">⬆</div><div class="ob-drop-lbl" id="ob-lbl-schedule">Tap to upload</div></div>
+        <input type="file" id="ob-input-schedule" accept=".pdf,.xlsx,.xls,application/pdf" style="display:none"/>
+      </div>
+      <div style="margin:0 0 12px;border:2px solid #000;border-radius:var(--radius);padding:12px 14px;background:#fffdf0">
+        <div style="font-size:10px;font-family:var(--mono);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Anthropic API Key</div>
+
+      </div>
+      <div class="ob-note">Files are read locally on this device.<br>Only text content is sent to Claude AI for parsing.</div>
+    </div>
+    <div class="ob-action">
+      <button class="ob-btn" id="ob-upload-parse" disabled>Parse with AI →</button>
+      <button class="ob-btn-sec" id="ob-upload-back">← Back</button>
+    </div>
+  </div>
+
+  <!-- ── STEP: PARSING ── -->
+  <div id="ob-step-parsing" class="ob-step">
+    <div class="ob-clap">
+      <div class="ob-title" id="ob-parse-title">Reading files…</div>
+      <div class="ob-sub" id="ob-parse-sub">This takes 20–60 seconds</div>
+    </div>
+    <div class="ob-body">
+      <div style="text-align:center;padding:20px 0 8px"><div class="ob-parse-spinner" id="ob-spinner"></div></div>
+      <div class="ob-parse-log" id="ob-parse-log"></div>
+    </div>
+  </div>
+
+</div></div>
+
+<div id="app" style="display:none">
+  <div class="clap">
+    <div class="clap-body">
+      <span class="clap-label" id="clap-label">DepMan · Props</span>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <div class="clap-title" id="clap-title" style="flex:1">Loading…</div>
+        <button class="sync-btn" id="sync-btn" onclick="manualSync()" title="Sync to server">⇅ Sync</button>
+      </div>
+      <div class="clap-meta"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Starting…</span></div>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div id="screen-home" class="screen active screen-pad">
+    <div class="search-wrap"><input class="search" id="home-search" placeholder="Search any prop…" type="text"/></div>
+    <div class="filter-row" id="home-filters">
+      <button class="filter-btn active renameable" data-f="all" data-lbl="f_all" data-lbl-default="All">{f_all}</button>
+      <button class="filter-btn renameable" data-f="hero" data-lbl="f_hero" data-lbl-default="Hero ★">{f_hero}</button>
+      <button class="filter-btn renameable" data-f="animal" data-lbl="f_animal" data-lbl-default="Animals">{f_animal}</button>
+      <button class="filter-btn renameable" data-f="fab" data-lbl="f_fab" data-lbl-default="In Fab">{f_fab}</button>
+      <button class="filter-btn renameable" data-f="consumable" data-lbl="f_consumable" data-lbl-default="Consumables">{f_consumable}</button>
+    </div>
+    <div class="action-row">
+      <button class="action-btn renameable" id="home-expand" data-lbl="btn_expand" data-lbl-default="Expand all">{btn_expand}</button>
+      <button class="action-btn renameable" id="home-add" data-lbl="btn_addprop" data-lbl-default="+ Add prop">{btn_addprop}</button>
+    </div>
+    <div id="buckets"></div>
+  </div>
+
+  <!-- TODAY -->
+  <div id="screen-today" class="screen screen-pad">
+    <div class="day-nav">
+      <button class="dnav-btn" id="prev-day">◀</button>
+      <div><div class="dnav-label" id="dnav-label">Shoot Day 1</div><div class="dnav-sub" id="dnav-sub">Wed 06/05/2026</div></div>
+      <button class="dnav-btn" id="next-day">▶</button>
+    </div>
+    <button class="cal-toggle" id="cal-toggle">▾ Calendar</button>
+    <div id="cal-container" style="display:none"></div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Packed</div><div class="stat-num"><span id="stat-packed">0</span><span class="stat-total"> / <span id="stat-total">0</span></span></div><div class="sbar"><div class="sbar-fill packed" id="bar-packed" style="width:0%"></div></div></div>
+      <div class="stat-card"><div class="stat-label">Van / On Set</div><div class="stat-num"><span id="stat-ready">0</span><span class="stat-total"> / <span id="stat-total2">0</span></span></div><div class="sbar"><div class="sbar-fill loc" id="bar-loc" style="width:0%"></div></div></div>
+    </div>
+    <div class="action-row" style="padding-top:10px">
+      <button class="action-btn renameable" id="today-expand" data-lbl="btn_today_expand" data-lbl-default="Expand all">{btn_today_expand}</button>
+      <button class="action-btn renameable" id="today-allvan" data-lbl="btn_allvan" data-lbl-default="All to Van">{btn_allvan}</button>
+    </div>
+    <div id="today-scenes"></div>
+  </div>
+
+  <!-- HERO -->
+  <div id="screen-hero" class="screen screen-pad">
+    <div class="search-wrap"><input class="search" id="hero-search" placeholder="Search hero props…" type="text"/></div>
+    <div class="filter-row">
+      <button class="filter-btn active renameable" data-hf="all" data-lbl="hf_all" data-lbl-default="All">{hf_all}</button>
+      <button class="filter-btn renameable" data-hf="fab" data-lbl="hf_fab" data-lbl-default="In Fab">{hf_fab}</button>
+      <button class="filter-btn renameable" data-hf="versions" data-lbl="hf_versions" data-lbl-default="Versions">{hf_versions}</button>
+      <button class="filter-btn renameable" data-hf="animals" data-lbl="hf_animals" data-lbl-default="Animals">{hf_animals}</button>
+    </div>
+    <div id="hero-list"></div>
+  </div>
+
+  <!-- CAST -->
+  <div id="screen-cast" class="screen screen-pad">
+    <div id="cast-content"></div>
+  </div>
+
+  <!-- GALLERY -->
+  <div id="screen-gallery" class="screen screen-pad">
+    <div id="gallery-grid-wrap"></div>
+  </div>
+
+  <!-- SCRIPT -->
+  <div id="screen-script" class="screen">
+
+    <!-- upload state -->
+    <div id="script-upload-state">
+      <div style="padding:10px 14px 0;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;opacity:0.4;font-family:var(--mono)">Script PDF</div>
+      <div class="script-upload-zone" id="script-drop-zone">
+        <div class="script-upload-icon">📄</div>
+        <div class="script-upload-label" id="script-upload-label">Tap to load script PDF</div>
+        <div class="script-upload-hint">Stays on this device only — never uploaded</div>
+      </div>
+      <input type="file" id="script-file-input" accept=".pdf,application/pdf" style="display:none"/>
+    </div>
+
+    <!-- viewer state (hidden until loaded) -->
+    <div id="script-viewer-state" style="display:none">
+      <div class="script-toolbar" id="script-toolbar">
+        <button class="script-tb-btn" id="sc-btn-prev" title="Prev page">◀</button>
+        <div class="script-page-info" id="sc-page-info">— / —</div>
+        <button class="script-tb-btn" id="sc-btn-next" title="Next page">▶</button>
+        <button class="script-tb-btn sc-tool-btn" id="sc-btn-highlight" data-tool="highlight" title="Highlight">🖊</button>
+        <button class="script-tb-btn sc-tool-btn" id="sc-btn-annotate"  data-tool="annotate"  title="Draw">✏️</button>
+        <button class="script-tb-btn" id="sc-btn-color"   title="Colour" style="font-size:16px">🎨</button>
+        <button class="script-tb-btn" id="sc-btn-layers"  title="Layers">≡</button>
+        <button class="script-tb-btn" id="sc-btn-undo"    title="Undo">↩</button>
+        <button class="script-tb-btn" id="sc-btn-search"  title="Search">🔍</button>
+        <button class="script-tb-btn" id="sc-btn-close"   title="Remove script" style="font-size:10px">✕</button>
+      </div>
+      <div id="sc-search-bar" style="display:none;padding:6px 12px;border-bottom:var(--border);position:relative;background:#fff">
+        <input class="script-tb-search" id="sc-search-input" placeholder="Search script…" type="text"/>
+        <div class="script-search-results" id="sc-search-results" style="display:none"></div>
+      </div>
+      <div class="script-canvas-wrap" id="sc-canvas-wrap">
+        <canvas id="sc-canvas"></canvas>
+      </div>
+      <div class="script-page-strip" id="sc-page-strip"></div>
+    </div>
+
+  </div>
+
+  <!-- CALLSHEET CALENDAR -->
+  <div id="screen-cal" class="screen screen-pad">
+    <div class="cal-screen-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;opacity:0.4;font-family:var(--mono)">Callsheet Calendar</div>
+      <button class="action-btn" id="cal-view-toggle" style="padding:4px 10px;font-size:9px">List view</button>
+    </div>
+    <div id="cal-screen-body"></div>
+  </div>
+
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox hidden" id="lightbox">
+  <button class="lightbox-close" id="lightbox-close">✕</button>
+  <img class="lightbox-img" id="lightbox-img" src="" alt=""/>
+  <div class="lightbox-name" id="lightbox-name"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="nav" style="display:none">
+  <button class="nav-btn active renameable" data-screen="home" data-lbl="nav_home" data-lbl-default="Home"><span class="nav-icon">⊟</span><span id="nav-lbl-home">{home}</span></button>
+  <button class="nav-btn renameable" data-screen="today" data-lbl="nav_today" data-lbl-default="Today"><span class="nav-icon">◎</span><span id="nav-lbl-today">{today}</span></button>
+  <button class="nav-btn renameable" data-screen="hero" data-lbl="nav_hero" data-lbl-default="Hero"><span class="nav-icon">★</span><span id="nav-lbl-hero">{hero}</span></button>
+  <button class="nav-btn renameable" data-screen="cast" data-lbl="nav_cast" data-lbl-default="Cast"><span class="nav-icon">◈</span><span id="nav-lbl-cast">{cast}</span></button>
+  <button class="nav-btn renameable" data-screen="gallery" data-lbl="nav_gallery" data-lbl-default="Photos"><span class="nav-icon">▦</span><span id="nav-lbl-gallery">{photos}</span></button>
+  <button class="nav-btn renameable" data-screen="script" data-lbl="nav_script" data-lbl-default="Script"><span class="nav-icon">📄</span><span id="nav-lbl-script">{script}</span></button>
+  <div id="screen-settings" class="screen screen-pad">
+
+    <!-- Production info -->
+    <div class="settings-section">
+      <div class="settings-section-head"><div class="settings-section-title">Production</div></div>
+      <div class="settings-row">
+        <div><div class="settings-row-label" id="set-prod-title">—</div><div class="settings-row-sub">Production title</div></div>
+        <button class="settings-btn" id="set-edit-prod">Edit</button>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label" id="set-dept-name">—</div><div class="settings-row-sub">Your department</div></div>
+        <button class="settings-btn" id="set-change-dept">Change</button>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label" id="set-username">—</div><div class="settings-row-sub">Your name</div></div>
+        <button class="settings-btn" id="set-edit-name">Edit</button>
+      </div>
+    </div>
+
+    <!-- Team / QR -->
+    <div class="settings-section">
+      <div class="settings-section-head"><div class="settings-section-title">Team Access</div></div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Invite teammates</div>
+          <div class="settings-row-sub">Share QR code — they scan and join</div>
+        </div>
+        <button class="settings-btn" id="set-show-qr">QR Code</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label" id="set-prod-code-label">Production code</div>
+          <div class="settings-row-sub" id="set-prod-code-sub">—</div>
+        </div>
+        <button class="settings-btn" id="set-copy-code">Copy</button>
+      </div>
+    </div>
+
+    <!-- Install -->
+    <div class="settings-section">
+      <div class="settings-section-head"><div class="settings-section-title">Install as App</div></div>
+      <div style="padding:14px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px">📱 iPhone &amp; iPad</div>
+        <div style="font-size:11px;font-family:var(--mono);line-height:1.9;opacity:0.7;margin-bottom:14px;background:#f9f9f9;border-radius:8px;padding:10px 12px">
+          1. Open this page in <strong>Safari</strong><br>
+          2. Tap the <strong>Share</strong> button (box with arrow ↑)<br>
+          3. Scroll down → tap <strong>Add to Home Screen</strong><br>
+          4. Tap <strong>Add</strong> — done ✓<br>
+          <span style="opacity:0.5;font-size:10px">Opens fullscreen, works offline, no browser bar</span>
+        </div>
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px">🤖 Android</div>
+        <div style="font-size:11px;font-family:var(--mono);line-height:1.9;opacity:0.7;background:#f9f9f9;border-radius:8px;padding:10px 12px">
+          1. Open in <strong>Chrome</strong><br>
+          2. Tap ⋮ menu → <strong>Add to Home screen</strong><br>
+          3. Or wait for the <strong>Install</strong> banner at the bottom<br>
+          <span style="opacity:0.5;font-size:10px">Must be on HTTPS (Netlify URL) — not a local file</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sync -->
+    <div class="settings-section">
+      <div class="settings-section-head"><div class="settings-section-title">Sync</div></div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Background sync</div>
+          <div class="settings-row-sub">Auto-sync when network available</div>
+        </div>
+        <button class="settings-btn" id="set-sync-toggle">On</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Sync now</div>
+          <div class="settings-row-sub" id="set-sync-status">—</div>
+        </div>
+        <button class="settings-btn" id="set-sync-now">⇅ Sync</button>
+      </div>
+    </div>
+
+    <!-- Data -->
+    <div class="settings-section">
+      <div class="settings-section-head"><div class="settings-section-title">Data</div></div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Download app</div>
+          <div class="settings-row-sub">Save DepMan to your device</div>
+        </div>
+        <button class="settings-btn" id="set-download">⬇ Save</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label" style="color:var(--red)">Reset production</div>
+          <div class="settings-row-sub">Clear all data and start over</div>
+        </div>
+        <button class="settings-btn" style="border-color:var(--red);color:var(--red)" id="set-reset">Reset</button>
+      </div>
+    </div>
+
+    <div style="padding:16px 14px;font-size:10px;font-family:var(--mono);opacity:0.3;text-align:center">DepMan v0.21</div>
+  </div>
+
+</div>
+
+<!-- QR CODE MODAL -->
+<div class="qr-modal hidden" id="qr-modal">
+  <div class="qr-card">
+    <div class="qr-title">Join Production</div>
+    <div class="qr-sub" id="qr-prod-name">Scan to join · then pick your department</div>
+    <div class="qr-canvas-wrap"><canvas id="qr-canvas" width="200" height="200"></canvas></div>
+    <div class="qr-code-text" id="qr-code-text">—</div>
+    <div class="qr-actions">
+      <button class="qr-action-btn" id="qr-share-btn">Share link</button>
+      <button class="qr-close-btn" id="qr-close-btn">Close</button>
+    </div>
+  </div>
+</div>
+  <button class="nav-btn renameable" data-screen="cal" data-lbl="nav_cal" data-lbl-default="Schedule"><span class="nav-icon">📅</span><span id="nav-lbl-cal">{cal}</span></button>
+  <button class="nav-btn renameable" data-screen="settings" data-lbl="nav_settings" data-lbl-default="Team"><span class="nav-icon">⚙</span><span id="nav-lbl-settings">{settings}</span></button>
+</nav>
+
+<div id="modal-root"></div>
+<div class="toast" id="toast"></div>
+
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const BIN_ID = '6a00f7d4c0954111d804719b';
+const API_KEY = '$2a$10$nsmDGbXubo.9WMajwKdrpOo0uCTmGq/inU9Wy5abqVqEff9rgAfhu';
+const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+function getAPIURL(){ 
+  const joinBin = DB.meta?.joinBinId;
+  return joinBin ? `https://api.jsonbin.io/v3/b/${joinBin}` : API_URL;
+}
+const HEADERS = {'Content-Type':'application/json','X-Master-Key':API_KEY,'X-Bin-Versioning':'false'};
+const LOCAL_KEY = 'depman_db';
+
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const STATES = [{id:'warehouse',label:'Warehouse'},{id:'van',label:'Van'},{id:'set',label:'On Set'},{id:'completed',label:'Completed'},{id:'fab',label:'In Fabrication'}];
+const stateLabel = id => (STATES.find(s=>s.id===id)||{label:id}).label;
+
+// Dynamic data — populated from DB after AI parse (or DHT seed on first run)
+// ALL_DAYS, SCENE_PROPS, HERO_DATA, CAST_DATA are all read from DB at runtime
+const ALL_DAYS    = () => DB.days    || [];
+const SCENE_PROPS = () => DB.scenes  || {};
+const HERO_DATA   = () => (DB.props||[]).filter(p=>(p.tags||[]).includes('hero'));
+const CAST_DATA   = () => Object.entries(DB.castProps||{}).map(([name,data])=>({
+  id: 'c_'+name.toLowerCase().replace(/\s+/g,'_'),
+  name, actor: data.actor||'', props: data.props||[]
+}));
+
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let DB = {
+  props:[], days:[], scenes:{}, castProps:{},
+  heroVersionStates:{}, castPropStates:{}, castPropPacked:{},
+  todayPacked:{}, todayLoc:{}, _ts:{},
+  meta:{ title:'', department:'Props', productionCode:'', director:'' },
+  setup: false  // false = show onboarding, true = go straight to app
+};
+const LABELS_KEY = 'depman_labels';
+// Custom labels — keyed by element id or label key
+let LABELS = {};
+
+function saveLabels(){ try{ localStorage.setItem(LABELS_KEY, JSON.stringify(LABELS)); }catch(e){} }
+function loadLabels(){ try{ const r=localStorage.getItem(LABELS_KEY); if(r)LABELS=JSON.parse(r); }catch(e){} }
+function lbl(key, fallback){ return LABELS[key]||fallback; }
+let currentSd = 1;
+let activeChar = null;
+let calOpen = false;
+let calMonth = 0;
+let homeFilter = 'all';
+let heroFilter = 'all';
+let homeDragId = null;
+let syncTimeout = null;
+let modalCb = null;
+let isSyncing = false;
+
+// ── OFFLINE-FIRST SYNC ────────────────────────────────────────────────────────
+// Architecture:
+//   1. localStorage  = source of truth, always written instantly, works offline
+//   2. JSONbin       = shared server, only used when online (qTake WiFi)
+//   3. Merge rule    = per-key timestamp — newest change wins
+//   4. Sync button   = manual trigger; also auto-fires when coming online
+
+const EMPTY_DB = ()=>({props:[],heroVersionStates:{},castPropStates:{},castPropPacked:{},todayPacked:{},todayLoc:{},_ts:{}});
+
+// ── timestamp helpers ─────────────────────────────────────────────────────────
+function tsNow(){ return Date.now(); }
+
+// stamp a specific key in _ts
+function tsSet(key){
+  if(!DB._ts) DB._ts={};
+  DB._ts[key] = tsNow();
+}
+
+// ── local storage ─────────────────────────────────────────────────────────────
+function saveLocal(){
+  try{ localStorage.setItem(LOCAL_KEY, JSON.stringify(DB)); }catch(e){}
+}
+
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if(raw){ DB = Object.assign(EMPTY_DB(), JSON.parse(raw)); return true; }
+  }catch(e){}
+  return false;
+}
+
+// ── merge: newest timestamp per top-level key wins ────────────────────────────
+function mergeDB(remote){
+  if(!remote) return;
+  const localTs  = DB._ts     || {};
+  const remoteTs = remote._ts || {};
+
+  // merge props array: match by id, newest _ts wins per prop
+  const localMap  = {};
+  const remoteMap = {};
+  (DB.props||[]).forEach(p=>localMap[p.id]=p);
+  (remote.props||[]).forEach(p=>remoteMap[p.id]=p);
+  const allIds = new Set([...Object.keys(localMap),...Object.keys(remoteMap)]);
+  DB.props = [...allIds].map(id=>{
+    const l = localMap[id], r = remoteMap[id];
+    if(!l) return r;
+    if(!r) return l;
+    const lt = (localTs['prop_'+id]||0);
+    const rt = (remoteTs['prop_'+id]||0);
+    return rt > lt ? r : l;
+  });
+
+  // merge flat state objects: per-key timestamp wins
+  ['heroVersionStates','castPropStates','castPropPacked','todayPacked','todayLoc'].forEach(field=>{
+    const lObj = DB[field]     || {};
+    const rObj = remote[field] || {};
+    const merged = {};
+    const allKeys = new Set([...Object.keys(lObj),...Object.keys(rObj)]);
+    allKeys.forEach(k=>{
+      const lt = localTs[field+'_'+k]  || 0;
+      const rt = remoteTs[field+'_'+k] || 0;
+      merged[k] = rt > lt ? rObj[k] : lObj[k];
+    });
+    DB[field] = merged;
+  });
+
+  // merge timestamps: keep the max of each
+  const mergedTs = Object.assign({}, remoteTs);
+  Object.keys(localTs).forEach(k=>{
+    mergedTs[k] = Math.max(mergedTs[k]||0, localTs[k]);
+  });
+  DB._ts = mergedTs;
+}
+
+// ── sync status UI ────────────────────────────────────────────────────────────
+function setSyncStatus(status, detail){
+  const dot   = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  const btn   = document.getElementById('sync-btn');
+  if(dot){
+    dot.className = 'sync-dot ' + (status==='ok'?'ok':status==='error'?'error':status==='offline'?'offline':'');
+  }
+  if(label){
+    const msgs = {ok:'Synced',error:'Sync failed',offline:'Local only',syncing:'Syncing…'};
+    label.textContent = detail || msgs[status] || status;
+  }
+  if(btn){
+    const online = navigator.onLine;
+    btn.textContent = isSyncing ? '↻' : (online ? '⇅ Sync' : '✈ Offline');
+    btn.disabled = isSyncing;
+    btn.style.opacity = isSyncing ? '0.5' : '1';
+  }
+}
+
+// ── load: local first (instant), then try server ──────────────────────────────
+async function loadDB(){
+  // loadLocal() already called in init — this function only syncs with server
+  if(!navigator.onLine){ setSyncStatus('offline','Offline — local only'); return; }
+  try{
+    const r = await fetch(API_URL+'/latest',{headers:{'X-Master-Key':API_KEY},signal:AbortSignal.timeout(6000)});
+    const j = await r.json();
+    if(j.record){
+      mergeDB(j.record);
+      saveLocal();
+      setSyncStatus('ok');
+      renderCurrent();
+    }
+  }catch(e){
+    setSyncStatus('offline','Server unreachable — using local');
+  }
+}
+
+// ── scheduleSave: always write local immediately, queue server sync ───────────
+function scheduleSave(){
+  saveLocal();                       // instant — phone never loses data
+  clearTimeout(syncTimeout);
+  setSyncStatus('offline','Local ✓');
+  if(navigator.onLine){
+    syncTimeout = setTimeout(pushToServer, 1500);
+  }
+}
+
+// ── pushToServer: merge with remote then push merged result ──────────────────
+async function pushToServer(){
+  if(isSyncing) return;
+  isSyncing = true;
+  setSyncStatus('syncing');
+  try{
+    // fetch remote first, merge, then push — prevents overwriting others' changes
+    const r = await fetch(API_URL+'/latest',{headers:{'X-Master-Key':API_KEY},signal:AbortSignal.timeout(6000)});
+    const j = await r.json();
+    if(j.record) mergeDB(j.record);
+    await fetch(API_URL,{method:'PUT',headers:HEADERS,body:JSON.stringify(DB),signal:AbortSignal.timeout(8000)});
+    saveLocal();
+    setSyncStatus('ok');
+    renderCurrent();
+  }catch(e){
+    setSyncStatus('error');
+  } finally{ isSyncing=false; setSyncStatus(isSyncing?'syncing':navigator.onLine?'ok':'offline'); }
+}
+
+// ── manual sync button ────────────────────────────────────────────────────────
+async function manualSync(){
+  if(!navigator.onLine){ toast('No network — still saving locally'); return; }
+  await pushToServer();
+  toast('Synced ✓');
+}
+
+// ── auto-sync when network comes back (qTake WiFi connects) ──────────────────
+window.addEventListener('online',  ()=>{ setSyncStatus('syncing'); pushToServer(); });
+window.addEventListener('offline', ()=>{ setSyncStatus('offline','Offline — saving locally'); });
+
+// ── background poll: only when online, merge-safe ────────────────────────────
+setInterval(async()=>{
+  if(!navigator.onLine || isSyncing) return;
+  try{
+    const r = await fetch(API_URL+'/latest',{headers:{'X-Master-Key':API_KEY},signal:AbortSignal.timeout(5000)});
+    const j = await r.json();
+    if(j.record){ mergeDB(j.record); saveLocal(); renderCurrent(); }
+  }catch(e){}
+}, 20000);
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1800);
+}
+function closeModal(){ document.getElementById('modal-root').innerHTML=''; modalCb=null; }
+
+function locModal(name, currentState, onSelect, onDelete){
+  const opts = STATES.map(s=>`<button class="modal-opt${s.id===currentState?' active':''}" data-set="${s.id}"><span class="ldot ${s.id}" style="margin-right:6px"></span>${s.label}</button>`).join('');
+  document.getElementById('modal-root').innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">
+    <div class="modal-title">Move to location</div>
+    <div class="modal-name">${name}</div>
+    <div class="modal-opts">${opts}</div>
+    <div class="modal-sep"></div>
+    ${onDelete?'<button class="modal-del" id="mdel">Delete prop</button>':''}
+    <button class="modal-cancel" id="mcancel">Cancel</button>
+  </div></div>`;
+  document.getElementById('mbg').addEventListener('click',e=>{if(e.target.id==='mbg')closeModal();});
+  document.getElementById('mcancel').addEventListener('click',closeModal);
+  if(onDelete) document.getElementById('mdel').addEventListener('click',()=>{closeModal();onDelete();});
+  document.querySelectorAll('[data-set]').forEach(b=>b.addEventListener('click',()=>{closeModal();onSelect(b.dataset.set);}));
+}
+
+function addPropModal(onAdd){
+  document.getElementById('modal-root').innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">
+    <div class="modal-title">Add new prop</div>
+    <div class="add-prop-form">
+      <label class="edit-label">Prop name</label>
+      <input class="edit-input" id="new-name" placeholder="e.g. Maria's red umbrella" autocomplete="off"/>
+      <label class="edit-label">Scene(s)</label>
+      <input class="edit-input" id="new-scenes" placeholder="e.g. 48, 56, 57" autocomplete="off"/>
+      <label class="edit-label">Tags (hero, animal, sfx, fab, consumable)</label>
+      <input class="edit-input" id="new-tags" placeholder="e.g. hero, consumable" autocomplete="off"/>
+    </div>
+    <button class="action-btn" id="mconfirm" style="width:100%;margin-bottom:6px">Add prop</button>
+    <button class="modal-cancel" id="mcancel">Cancel</button>
+  </div></div>`;
+  document.getElementById('mbg').addEventListener('click',e=>{if(e.target.id==='mbg')closeModal();});
+  document.getElementById('mcancel').addEventListener('click',closeModal);
+  document.getElementById('mconfirm').addEventListener('click',()=>{
+    const name = document.getElementById('new-name').value.trim();
+    if(!name){toast('Enter a prop name');return;}
+    const scenes = document.getElementById('new-scenes').value.split(',').map(s=>s.trim()).filter(Boolean);
+    const tags = document.getElementById('new-tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+    closeModal();
+    onAdd({id:uid(),name,scenes,tags,state:'warehouse'});
+  });
+}
+
+// ── HOME SCREEN ───────────────────────────────────────────────────────────────
+function renderHome(){
+  const q = document.getElementById('home-search').value.toLowerCase();
+  const all = DB.props||[];
+  const filtered = all.filter(p=>{
+    const matchQ = !q || p.name.toLowerCase().includes(q);
+    const matchF = homeFilter==='all' || (p.tags||[]).includes(homeFilter);
+    return matchQ && matchF;
+  });
+  const bucketOrder = ['set','van','warehouse','completed'];
+  document.getElementById('buckets').innerHTML = bucketOrder.map(b=>{
+    const items = filtered.filter(p=>p.state===b);
+    const body = items.length
+      ? items.map(p=>{
+          const star = (p.tags||[]).includes('hero')?'<span class="star">★</span>':'';
+          const tags = (p.tags||[]).filter(t=>t&&t!=='hero').map(t=>`<span class="ptag ${t}">${t}</span>`).join('');
+          return `<div class="prop-item" draggable="true" data-id="${p.id}">
+            <span class="grip">⋮⋮</span>${star}
+            <div class="prop-info">
+              <div class="prop-name-text">${p.name}</div>
+              ${p.scenes&&p.scenes.length?`<div class="prop-sub-text">Sc.${p.scenes.slice(0,5).join(', ')}${p.scenes.length>5?'…':''}</div>`:''}
+            </div>${tags}
+            ${photoThumbHtml(p.id)}
+          </div>${photoPanelHtml(p.id, p.name)}`;
+        }).join('')
+      : `<div class="bucket-empty">${q?'no matches':'empty — drag props here'}</div>`;
+    const labels={
+      warehouse: lbl('bucket_warehouse','Warehouse'),
+      van:       lbl('bucket_van','Van'),
+      set:       lbl('bucket_set','On Set'),
+      completed: lbl('bucket_completed','Completed')
+    };
+    const open = document.querySelector(`#buckets .bucket[data-b="${b}"]`)?.classList.contains('open') ?? true;
+    return `<div class="bucket${open?' open':''}" data-b="${b}">
+      <div class="bucket-head">
+        <div class="bucket-left"><span class="bdot ${b}"></span><span class="bucket-name renameable" data-lbl="bucket_${b}" data-lbl-default="${{warehouse:'Warehouse',van:'Van',set:'On Set',completed:'Completed'}[b]}">${labels[b]}</span></div>
+        <div class="bucket-right"><span class="bcount">${items.length}</span><span class="bchev">▶</span></div>
+      </div>
+      <div class="bucket-body">${body}</div>
+    </div>`;
+  }).join('');
+  wireBuckets();
+  wirePhotoToggles();
+  wirePhotoPanels();
+  resolveLabels();
+}
+
+function wireBuckets(){
+  document.querySelectorAll('.bucket-head').forEach(h=>h.addEventListener('click',()=>h.parentElement.classList.toggle('open')));
+  let dragId=null;
+  document.querySelectorAll('.prop-item').forEach(el=>{
+    el.addEventListener('dragstart',e=>{dragId=el.dataset.id;el.classList.add('dragging');try{e.dataTransfer.setData('text/plain',dragId);}catch(_){}});
+    el.addEventListener('dragend',()=>{el.classList.remove('dragging');dragId=null;});
+    el.addEventListener('click',()=>{
+      const p = (DB.props||[]).find(x=>x.id===el.dataset.id);
+      if(!p)return;
+      locModal(p.name, p.state, newState=>{
+        p.state=newState; tsSet('prop_'+p.id); scheduleSave(); renderHome(); toast('Moved to '+stateLabel(newState));
+      }, ()=>{
+        if(!confirm(`Delete "${p.name}"?`))return;
+        DB.props = (DB.props||[]).filter(x=>x.id!==p.id); tsSet('prop_'+p.id);
+        scheduleSave(); renderHome(); toast('Deleted');
+      });
+    });
+  });
+  document.querySelectorAll('.bucket').forEach(b=>{
+    const target=b.dataset.b;
+    b.addEventListener('dragover',e=>{e.preventDefault();b.classList.add('drag-over');});
+    b.addEventListener('dragleave',()=>b.classList.remove('drag-over'));
+    b.addEventListener('drop',e=>{
+      e.preventDefault();b.classList.remove('drag-over');
+      const id=dragId||e.dataTransfer.getData('text/plain');
+      const p=(DB.props||[]).find(x=>x.id===id);
+      if(p&&p.state!==target){p.state=target;tsSet('prop_'+p.id);if(!b.classList.contains('open'))b.classList.add('open');scheduleSave();renderHome();toast('Moved to '+stateLabel(target));}
+    });
+  });
+}
+
+// ── TODAY SCREEN ──────────────────────────────────────────────────────────────
+function renderToday(){
+  const day = ALL_DAYS().find(d=>d.sd===currentSd)||ALL_DAYS()[0];
+  document.getElementById('dnav-label').textContent='Shoot Day '+day.sd;
+  document.getElementById('dnav-sub').textContent=day.label+'/2026 · '+day.loc;
+  document.getElementById('prev-day').disabled=currentSd<=1;
+  document.getElementById('next-day').disabled=currentSd>=33;
+  document.getElementById('cal-toggle').textContent=(calOpen?'▴':'▾')+' Calendar — SD'+day.sd+' · '+day.loc;
+
+  // build today props from scene data
+  let allProps=[], sceneBlocks=[];
+  (day.scenes||[]).forEach(sc=>{
+    const props = (SCENE_PROPS()[sc]||[]).map((name,i)=>({key:`${day.sd}_${sc}_${i}`,name,scene:sc}));
+    allProps = allProps.concat(props);
+    sceneBlocks.push({sc,props});
+  });
+
+  let total=0,packed=0,ready=0;
+  const html = sceneBlocks.map(({sc,props})=>{
+    if(!props.length)return'';
+    const items = props.map(p=>{
+      const isPacked=!!(DB.todayPacked||{})[p.key];
+      const loc=(DB.todayLoc||{})[p.key]||'set';
+      if(isPacked)packed++;
+      if(loc==='van'||loc==='set')ready++;
+      total++;
+      const isHero=p.name.includes('★');
+      return `<div class="tprop${isPacked?' packed':''}" data-pk="${p.key}">
+        <div class="tchk" data-pack="${p.key}"></div>
+        <div class="tprop-main">
+          <div class="tprop-name">${p.name}</div>
+          <div class="tprop-row2">
+            <button class="loc-chip" data-tloc="${p.key}" data-tname="${p.name.replace(/"/g,'&quot;')}"><span class="ldot ${loc}"></span>${stateLabel(loc)} ▾</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    const scPacked=props.filter(p=>(DB.todayPacked||{})[p.key]).length;
+    const allReady=props.every(p=>{const l=(DB.todayLoc||{})[p.key]||'set';return l==='van'||l==='set';});
+    return `<div class="scene-block${allReady?' all-ready':''}" data-sc="${sc}">
+      <div class="scene-head">
+        <span class="scene-num">Sc.${sc}</span>
+        <div class="scene-info"><div class="scene-loc-text">${(ALL_DAYS().find(d=>d.sd===currentSd)||{}).loc||''}</div></div>
+        <span class="scene-count"><span class="done">${scPacked}</span>/${props.length}</span>
+        <span class="bchev" style="margin-left:6px">▶</span>
+      </div>
+      <div class="scene-body">${items}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('today-scenes').innerHTML=html||'<div style="padding:20px;text-align:center;opacity:0.35;font-size:13px">No prop data for this day yet</div>';
+  document.getElementById('stat-packed').textContent=packed;
+  document.getElementById('stat-total').textContent=total;
+  document.getElementById('stat-ready').textContent=ready;
+  document.getElementById('stat-total2').textContent=total;
+  document.getElementById('bar-packed').style.width=total?Math.round(packed/total*100)+'%':'0%';
+  document.getElementById('bar-loc').style.width=total?Math.round(ready/total*100)+'%':'0%';
+
+  // open all scene blocks by default so content is immediately visible
+  document.querySelectorAll('.scene-block').forEach(s=>s.classList.add('open'));
+
+  document.querySelectorAll('.scene-head').forEach(h=>h.addEventListener('click',()=>h.parentElement.classList.toggle('open')));
+  document.querySelectorAll('[data-pack]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    const k=el.dataset.pack;
+    if(!DB.todayPacked)DB.todayPacked={};
+    DB.todayPacked[k]=!DB.todayPacked[k]; tsSet('todayPacked_'+k);
+    scheduleSave();renderToday();
+  }));
+  document.querySelectorAll('[data-tloc]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    const k=el.dataset.tloc, name=el.dataset.tname;
+    const cur=(DB.todayLoc||{})[k]||'set';
+    locModal(name,cur,newState=>{
+      if(!DB.todayLoc)DB.todayLoc={};
+      DB.todayLoc[k]=newState;tsSet('todayLoc_'+k);scheduleSave();renderToday();
+    });
+  }));
+  if(calOpen)buildCal();
+  resolveLabels();
+}
+
+function buildCal(){
+  const MONTHS=[{year:2026,month:4,name:'May 2026'},{year:2026,month:5,name:'June 2026'}];
+  const m=MONTHS[calMonth];
+  const firstDay=new Date(m.year,m.month,1).getDay();
+  const daysInMonth=new Date(m.year,m.month+1,0).getDate();
+  const sdMap={};
+  ALL_DAYS().forEach(d=>{const dt=new Date(d.date);if(dt.getFullYear()===m.year&&dt.getMonth()===m.month)sdMap[dt.getDate()]=d.sd;});
+  const DOWS=['Mo','Tu','We','Th','Fr','Sa','Su'];
+  let html=`<div class="cal-wrap"><div class="cal-month">
+    <button class="cal-month-btn" id="cal-prev">◀</button>
+    <span class="cal-month-label">${m.name}</span>
+    <button class="cal-month-btn" id="cal-next">▶</button>
+  </div><div class="cal-grid">`;
+  DOWS.forEach(d=>html+=`<div class="cal-dow">${d}</div>`);
+  const offset=(firstDay+6)%7;
+  for(let i=0;i<offset;i++)html+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const sd=sdMap[d];
+    const isActive=sd===currentSd;
+    html+=`<div class="cal-cell${sd?' shoot':''}${isActive?' active-sd':''}"${sd?` data-csd="${sd}"`:''}><div class="cal-date">${d}</div>${sd?`<div class="cal-sd">SD${sd}</div>`:''}</div>`;
+  }
+  html+=`</div></div>`;
+  document.getElementById('cal-container').innerHTML=html;
+  document.getElementById('cal-prev').addEventListener('click',e=>{e.stopPropagation();if(calMonth>0){calMonth--;buildCal();}});
+  document.getElementById('cal-next').addEventListener('click',e=>{e.stopPropagation();if(calMonth<1){calMonth++;buildCal();}});
+  document.querySelectorAll('[data-csd]').forEach(el=>el.addEventListener('click',()=>{
+    currentSd=parseInt(el.dataset.csd);
+    const d=ALL_DAYS().find(x=>x.sd===currentSd);
+    if(d){const mo=new Date(d.date).getMonth();calMonth=mo===4?0:1;}
+    renderToday();buildCal();
+  }));
+}
+
+// ── HERO SCREEN ───────────────────────────────────────────────────────────────
+function renderHero(){
+  const q=document.getElementById('hero-search').value.toLowerCase();
+  const day=ALL_DAYS().find(d=>d.sd===currentSd)||ALL_DAYS()[0];
+  const todayScenes=day.scenes||[];
+  const items=HERO_DATA().filter(h=>{
+    if(q&&!h.name.toLowerCase().includes(q)&&!h.sub.toLowerCase().includes(q))return false;
+    if(heroFilter==='all')return true;
+    if(heroFilter==='fab')return h.filter.includes('fab');
+    if(heroFilter==='versions')return h.filter.includes('versions');
+    if(heroFilter==='animals')return h.filter.includes('animals');
+    return true;
+  });
+  document.getElementById('hero-list').innerHTML = `<div style="padding-top:10px"></div>` + items.map((h,hi)=>{
+    const hasToday=h.scenes.some(s=>todayScenes.includes(s));
+    const todayBadge=hasToday?'<span class="today-badge">TODAY</span>':'';
+    const verStates=((DB.heroVersionStates||{})[h.id])||{};
+    const versions=h.versions.map((v,vi)=>{
+      const st=verStates[vi]||v.state;
+      return `<div class="ver-row">
+        <span class="ver-tag">${v.tag}</span>
+        <div class="ver-info">
+          <div contenteditable="true" class="ver-name" data-hid="${h.id}" data-vi="${vi}" data-field="name">${v.name}</div>
+          <div contenteditable="true" class="ver-desc" data-hid="${h.id}" data-vi="${vi}" data-field="desc">${v.desc}</div>
+        </div>
+        <button class="loc-chip" data-hver="${h.id}" data-vi="${vi}"><span class="ldot ${st}"></span>${stateLabel(st)} ▾</button>
+      </div>`;
+    }).join('');
+    const scenePills=h.scenes.map(s=>`<span class="spill${todayScenes.includes(s)?' today':''}">${s}</span>`).join('');
+    const noteHtml=h.note?`<div class="hsection"><div class="hsection-title">Notes</div><textarea class="note-area" data-hnote="${h.id}" rows="3">${h.note}</textarea></div>`:'';
+    const fabHtml=h.fab?`<div class="hsection"><div class="hsection-title">Fabrication</div><textarea class="fab-area" data-hfab="${h.id}" rows="3">${h.fab}</textarea></div>`:'';
+    const isOpen=document.querySelector(`#hero-list .hero-card[data-hcard="${h.id}"]`)?.classList.contains('open') ?? (hi===0);
+    return `<div class="hero-card${isOpen?' open':''}" data-hcard="${h.id}" style="margin:0 14px 10px">
+      <div class="hero-head" data-hid="${h.id}">
+        <div class="hero-head-left">
+          <div class="hero-star-label">★ HERO ${todayBadge}</div>
+          <div contenteditable="true" class="hero-title" data-htitle="${h.id}">${h.name}</div>
+          <div contenteditable="true" class="hero-sub" data-hsub="${h.id}">${h.sub}</div>
+        </div>
+        <span class="bchev" style="margin-top:4px;padding:8px;margin-right:-8px;cursor:pointer;flex-shrink:0" data-toggle="${h.id}">▶</span>
+      </div>
+      <div class="hero-body">
+        <div class="hsection"><div class="hsection-title">Versions / Copies</div>${versions}</div>
+        <div class="hsection"><div class="hsection-title">Appears in scenes</div><div class="scene-pills">${scenePills}</div></div>
+        ${noteHtml}${fabHtml}
+        <div class="haction-row">
+          <button class="haction-btn" data-htoday="${h.id}">Today's scenes</button>
+          <button class="haction-btn" style="border-color:var(--red);color:var(--red)" data-hflag="${h.id}">Flag issue</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('.hero-head').forEach(h=>h.addEventListener('click',e=>{
+    // only toggle from chevron or the label row — NOT from contenteditable fields
+    if(e.target.contentEditable==='true')return;
+    if(e.target.dataset.htitle||e.target.dataset.hsub)return;
+    if(e.target.closest('[data-hver]'))return;
+    document.querySelector(`.hero-card[data-hcard="${h.dataset.hid}"]`).classList.toggle('open');
+  }));
+  document.querySelectorAll('[data-hver]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    const h=HERO_DATA().find(x=>x.id===el.dataset.hver);
+    const vi=parseInt(el.dataset.vi);
+    if(!h)return;
+    if(!DB.heroVersionStates)DB.heroVersionStates={};
+    if(!DB.heroVersionStates[h.id])DB.heroVersionStates[h.id]={};
+    const cur=DB.heroVersionStates[h.id][vi]||h.versions[vi].state;
+    locModal(`★ ${h.name} · ${h.versions[vi].name}`,cur,newState=>{
+      DB.heroVersionStates[h.id][vi]=newState;tsSet('heroVersionStates_'+h.id+'_'+vi);scheduleSave();renderHero();
+    });
+  }));
+  document.querySelectorAll('textarea[data-hnote]').forEach(el=>el.addEventListener('change',()=>{
+    const h=HERO_DATA().find(x=>x.id===el.dataset.hnote);if(h)h.note=el.value;
+  }));
+  document.querySelectorAll('textarea[data-hfab]').forEach(el=>el.addEventListener('change',()=>{
+    const h=HERO_DATA().find(x=>x.id===el.dataset.hfab);if(h)h.fab=el.value;
+  }));
+  document.querySelectorAll('[data-htoday]').forEach(el=>el.addEventListener('click',()=>{
+    const h=HERO_DATA().find(x=>x.id===el.dataset.htoday);
+    if(!h)return;
+    const day=ALL_DAYS().find(d=>d.sd===currentSd)||ALL_DAYS()[0];
+    const sc=h.scenes.filter(s=>day.scenes.includes(s));
+    toast(sc.length?`SD${currentSd}: Sc.${sc.join(', ')}`:h.name+' not on today\'s call');
+  }));
+  document.querySelectorAll('[data-hflag]').forEach(el=>el.addEventListener('click',()=>{
+    const h=HERO_DATA().find(x=>x.id===el.dataset.hflag);
+    toast('Flagged: '+h?.name);
+  }));
+  resolveLabels();
+}
+
+// ── CAST SCREEN ───────────────────────────────────────────────────────────────
+function renderCast(){
+  const day=ALL_DAYS().find(d=>d.sd===currentSd)||ALL_DAYS()[0];
+  const todayScenes=day.scenes||[];
+  if(!activeChar){
+    document.getElementById('cast-content').innerHTML=`<div class="cast-grid">${
+      CAST_DATA().map(c=>`<button class="cast-btn" data-cid="${c.id}">
+        <div class="cnum">${c.num}</div>
+        <div class="cname">${c.name}</div>
+        <div class="cactor">${c.actor}</div>
+      </button>`).join('')
+    }</div>`;
+    document.querySelectorAll('.cast-btn').forEach(b=>b.addEventListener('click',()=>{activeChar=b.dataset.cid;renderCast();}));
+    return;
+  }
+  const c=CAST_DATA().find(x=>x.id===activeChar);
+  if(!c){activeChar=null;renderCast();return;}
+  const states=DB.castPropStates||{};
+  const packed=DB.castPropPacked||{};
+  const total=c.props.length;
+  const packedCount=c.props.filter(p=>packed[p.id]).length;
+  const onSet=c.props.filter(p=>{const s=states[p.id]||p.state;return s==='set'||s==='van';}).length;
+  const heroCount=c.props.filter(p=>(p.tags||[]).includes('hero')).length;
+
+  const rows=c.props.map(p=>{
+    const st=states[p.id]||p.state;
+    const isPacked=!!packed[p.id];
+    const isHero=(p.tags||[]).includes('hero');
+    const hasToday=p.scenes.some(s=>todayScenes.includes(s));
+    const tags=(p.tags||[]).filter(t=>t&&t!=='hero').map(t=>`<span class="ptag ${t}">${t}</span>`).join('');
+    const scenePills=p.scenes.slice(0,5).map(s=>`<span class="spill${todayScenes.includes(s)?' today':''}">${s}</span>`).join('')+(p.scenes.length>5?`<span class="spill">+${p.scenes.length-5}</span>`:'');
+    return `<div class="cprop-row${isPacked?' packed':''}" data-cid="${c.id}" data-pid="${p.id}">
+      <div class="tchk" data-cpack="${p.id}"></div>
+      <div class="cprop-main">
+        <div contenteditable="true" class="cprop-name" data-cedit="${p.id}">${isHero?'★ ':''}${p.name}</div>
+        <div class="cprop-row2">
+          ${tags}
+          <button class="loc-chip" data-cloc="${p.id}" data-cname="${p.name.replace(/"/g,'&quot;')}"><span class="ldot ${st}"></span>${stateLabel(st)} ▾</button>
+          ${hasToday?'<span class="ptag" style="border-color:var(--yellow-dark);color:var(--yellow-dark);background:#fffaea">TODAY</span>':''}
+          ${scenePills}
+        </div>
+      </div>
+      <button class="del-btn" data-cdel="${p.id}" title="Delete">✕</button>
+    </div>`;
+  }).join('');
+
+  document.getElementById('cast-content').innerHTML=`
+    <button class="back-btn" id="back-cast">◀ All Characters</button>
+    <div class="char-header">
+      <div class="char-head-top">
+        <div class="cnum">${c.num}</div>
+        <div class="cname">${c.name}</div>
+        <div class="cactor">${c.actor}</div>
+        <div class="char-stats">
+          <div class="cstat"><div class="cstat-num">${total}</div><div class="cstat-label">Props</div></div>
+          <div class="cstat"><div class="cstat-num">${packedCount}</div><div class="cstat-label">Packed</div></div>
+          <div class="cstat"><div class="cstat-num">${onSet}</div><div class="cstat-label">Van/Set</div></div>
+          <div class="cstat"><div class="cstat-num">${heroCount}</div><div class="cstat-label">Hero ★</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cprop-list">
+      <div class="cprop-header">All character props · tap to pack · tap chip to move · tap ✕ to delete</div>
+      ${rows}
+      <button class="add-btn" id="cast-add-btn">+ Add prop to ${c.name}</button>
+    </div>`;
+
+  document.getElementById('back-cast').addEventListener('click',()=>{activeChar=null;renderCast();});
+  document.getElementById('cast-add-btn').addEventListener('click',()=>{
+    addPropModal(newProp=>{
+      c.props.push({...newProp,state:'warehouse',packed:false});
+      renderCast();toast('Prop added');
+    });
+  });
+  document.querySelectorAll('[data-cpack]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(!DB.castPropPacked)DB.castPropPacked={};
+    DB.castPropPacked[el.dataset.cpack]=!DB.castPropPacked[el.dataset.cpack]; tsSet('castPropPacked_'+el.dataset.cpack);
+    scheduleSave();renderCast();
+  }));
+  document.querySelectorAll('[data-cloc]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    const pid=el.dataset.cloc, name=el.dataset.cname;
+    const cur=(DB.castPropStates||{})[pid]||'set';
+    locModal(name,cur,newState=>{
+      if(!DB.castPropStates)DB.castPropStates={};
+      DB.castPropStates[pid]=newState;tsSet('castPropStates_'+pid);scheduleSave();renderCast();
+    });
+  }));
+  document.querySelectorAll('[data-cdel]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    const pid=el.dataset.cdel;
+    const p=c.props.find(x=>x.id===pid);
+    if(!p)return;
+    if(!confirm(`Delete "${p.name}" from ${c.name}?`))return;
+    c.props=c.props.filter(x=>x.id!==pid);
+    scheduleSave();renderCast();toast('Deleted');
+  }));
+  document.querySelectorAll('[data-cedit]').forEach(el=>{
+    el.addEventListener('click',e=>e.stopPropagation());
+    el.addEventListener('blur',()=>{
+      const p=c.props.find(x=>x.id===el.dataset.cedit);
+      if(p){p.name=el.innerText.replace(/^★\s*/,'').trim();scheduleSave();}
+    });
+  });
+}
+
+// ── CLAP HEADER ───────────────────────────────────────────────────────────────
+function updateClap(screen){
+  const day=ALL_DAYS().find(d=>d.sd===currentSd)||ALL_DAYS()[0];
+  const titles={home:'Props · All',today:`SD${currentSd} · ${day.label}`,hero:'Hero ★ Props',cast:activeChar?(CAST_DATA().find(c=>c.id===activeChar)||{}).name||'Cast':'Cast Props'};
+  const metas={home:`${(DB.props||[]).length} props across all locations`,today:day.loc,hero:'Versions · Continuity · Fabrication',cast:activeChar?(CAST_DATA().find(c=>c.id===activeChar)||{}).actor||'':'All characters'};
+  document.getElementById('clap-title').textContent=titles[screen]||'DHT Props';
+  // update meta text without destroying sync-dot
+  const metaEl=document.getElementById('clap-meta');
+  let syncDot=document.getElementById('sync-dot');
+  let syncLbl=document.getElementById('sync-label');
+  if(!syncDot){
+    metaEl.innerHTML=`<span class="sync-dot" id="sync-dot"></span><span id="sync-label">Ready</span><span id="clap-meta-extra"></span>`;
+    syncDot=document.getElementById('sync-dot');
+    syncLbl=document.getElementById('sync-label');
+  }
+  let extra=document.getElementById('clap-meta-extra');
+  if(extra)extra.textContent=' · '+(metas[screen]||'');
+  // refresh sync button label
+  const btn=document.getElementById('sync-btn');
+  if(btn){btn.textContent=isSyncing?'↻':(navigator.onLine?'⇅ Sync':'✈ Offline');btn.disabled=isSyncing;}
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+let currentScreen='home';
+function showScreen(name){
+  currentScreen=name;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.screen===name));
+  updateClap(name);
+  // always render immediately so screen isn't blank
+  if(name==='home')renderHome();
+  else if(name==='today')renderToday();
+  else if(name==='hero')renderHero();
+  else if(name==='cast')renderCast();
+  else if(name==='gallery')renderGallery();
+  else if(name==='script'){/* viewer manages itself */}
+  else if(name==='cal')renderCalScreen();
+  else if(name==='settings'){ renderSettings(); }
+  resolveLabels();
+}
+
+function renderCurrent(){
+  if(currentScreen==='home')renderHome();
+  else if(currentScreen==='today')renderToday();
+  else if(currentScreen==='hero')renderHero();
+  else if(currentScreen==='cast')renderCast();
+  else if(currentScreen==='gallery')renderGallery();
+  else if(currentScreen==='cal')renderCalScreen();
+  else if(currentScreen==='settings')renderSettings();
+}
+
+
+// ── FILE HELPERS ─────────────────────────────────────────────────────────────
+function readFileAsBase64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=()=>rej(new Error('Read failed'));
+    r.readAsDataURL(file);
+  });
+}
+function readFileAsText(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result);
+    r.onerror=()=>rej(new Error('Read failed'));
+    r.readAsText(file);
+  });
+}
+
+// ── PHOTOS ────────────────────────────────────────────────────────────────────
+// Photos stored in DB.photos = { propId: 'data:image/jpeg;base64,...' }
+// Kept separate from props so they don't bloat the sync payload
+
+const PHOTO_KEY = 'depman_photos';
+
+function savePhotos(){
+  try{ localStorage.setItem(PHOTO_KEY, JSON.stringify(DB.photos||{})); }catch(e){ toast('Storage full — photo not saved'); }
+}
+
+function loadPhotos(){
+  try{
+    const raw = localStorage.getItem(PHOTO_KEY);
+    if(raw) DB.photos = JSON.parse(raw);
+    else DB.photos = {};
+  }catch(e){ DB.photos = {}; }
+}
+
+function readImageFile(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=> res(r.result); // data URL
+    r.onerror = ()=> rej(new Error('Read failed'));
+    r.readAsDataURL(file);
+  });
+}
+
+// Compress image to max 800px wide, JPEG 0.75
+function compressImage(dataUrl, maxW=800){
+  return new Promise(res=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const c = document.createElement('canvas');
+      c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      res(c.toDataURL('image/jpeg', 0.75));
+    };
+    img.src = dataUrl;
+  });
+}
+
+// Open camera or gallery for a prop
+function openPhotoInput(propId, onDone){
+  // Create a hidden input, trigger it
+  const existing = document.getElementById('global-photo-input');
+  if(existing) existing.remove();
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.capture = 'environment'; // rear camera by default — will also allow gallery
+  inp.id = 'global-photo-input';
+  inp.style.display = 'none';
+  document.body.appendChild(inp);
+  inp.addEventListener('change', async ()=>{
+    const file = inp.files[0];
+    if(!file) return;
+    const raw = await readImageFile(file);
+    const compressed = await compressImage(raw);
+    if(!DB.photos) DB.photos = {};
+    DB.photos[propId] = compressed;
+    savePhotos();
+    onDone(compressed);
+    inp.remove();
+  });
+  inp.click();
+}
+
+// Photo thumbnail — small camera icon or the photo, shown on prop row
+function photoThumbHtml(propId){
+  const photo = (DB.photos||{})[propId];
+  if(photo){
+    return `<img class="prop-photo-thumb" data-photo-toggle="${propId}" src="${photo}" alt="photo"/>`;
+  }
+  return `<div class="prop-photo-btn" data-photo-toggle="${propId}" title="Add photo">📷</div>`;
+}
+
+// Wire photo toggles on home screen prop rows
+function wirePhotoToggles(){
+  document.querySelectorAll('[data-photo-toggle]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const propId = el.dataset.photoToggle;
+      const panel = document.getElementById('photo-panel-'+propId);
+      if(!panel) return;
+      const isOpen = panel.classList.contains('open');
+      // close all other panels
+      document.querySelectorAll('.prop-photo-panel.open').forEach(p=>p.classList.remove('open'));
+      if(!isOpen) panel.classList.add('open');
+    });
+  });
+}
+
+// Build the photo panel HTML (hidden row beneath prop)
+function photoPanelHtml(propId, propName){
+  const photo = (DB.photos||{})[propId];
+  return `<div class="prop-photo-panel" id="photo-panel-${propId}">
+    ${photo
+      ? `<img class="photo-panel-img" src="${photo}" data-lightbox="${propId}" data-lightbox-name="${propName.replace(/"/g,'&quot;')}"/>
+         <div class="photo-panel-actions">
+           <button class="photo-action-btn" data-photo-replace="${propId}">📷 Replace</button>
+           <button class="photo-action-btn danger" data-photo-delete="${propId}">✕ Delete</button>
+         </div>`
+      : `<div style="text-align:center;padding:8px 0 4px">
+           <div style="font-size:11px;opacity:0.45;font-family:var(--mono);margin-bottom:10px">No photo yet</div>
+           <div style="display:flex;gap:8px">
+             <button class="photo-action-btn" data-photo-camera="${propId}">📷 Camera</button>
+             <button class="photo-action-btn" data-photo-gallery="${propId}">🖼 Gallery</button>
+           </div>
+         </div>`
+    }
+  </div>`;
+}
+
+function wirePhotoPanels(){
+  // Camera button
+  document.querySelectorAll('[data-photo-camera]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const pid = el.dataset.photoCamera;
+      openPhotoInput(pid, ()=>{ renderHome(); toast('Photo saved'); });
+    });
+  });
+  // Gallery button
+  document.querySelectorAll('[data-photo-gallery]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const pid = el.dataset.photoGallery;
+      const inp = document.createElement('input');
+      inp.type='file'; inp.accept='image/*'; inp.style.display='none';
+      document.body.appendChild(inp);
+      inp.addEventListener('change', async ()=>{
+        if(!inp.files[0]) return;
+        const raw = await readImageFile(inp.files[0]);
+        const compressed = await compressImage(raw);
+        if(!DB.photos) DB.photos={};
+        DB.photos[pid] = compressed;
+        savePhotos(); renderHome(); toast('Photo saved');
+        inp.remove();
+      });
+      inp.click();
+    });
+  });
+  // Replace
+  document.querySelectorAll('[data-photo-replace]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const pid = el.dataset.photoReplace;
+      openPhotoInput(pid, ()=>{ renderHome(); toast('Photo updated'); });
+    });
+  });
+  // Delete
+  document.querySelectorAll('[data-photo-delete]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const pid = el.dataset.photoDelete;
+      if(!confirm('Delete photo?')) return;
+      delete DB.photos[pid];
+      savePhotos(); renderHome(); toast('Photo deleted');
+    });
+  });
+  // Lightbox from panel
+  document.querySelectorAll('[data-lightbox]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      openLightbox((DB.photos||{})[el.dataset.lightbox], el.dataset.lightboxName);
+    });
+  });
+}
+
+// ── GALLERY SCREEN ────────────────────────────────────────────────────────────
+function renderGallery(){
+  const photos = DB.photos||{};
+  const props  = DB.props||[];
+  const entries = Object.entries(photos).map(([id, src])=>{
+    const p = props.find(x=>x.id===id);
+    return {id, src, name: p?p.name:'Unknown prop'};
+  });
+
+  const wrap = document.getElementById('gallery-grid-wrap');
+  if(!entries.length){
+    wrap.innerHTML = `<div class="gallery-empty">No photos yet.<br>Tap 📷 on any prop to add one.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = `
+    <div style="padding:10px 14px 4px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;opacity:0.4;font-family:var(--mono)">${entries.length} photo${entries.length!==1?'s':''}</div>
+    <div class="gallery-grid">
+      ${entries.map(e=>`
+        <div class="gallery-cell" data-lightbox="${e.id}" data-lightbox-name="${e.name.replace(/"/g,'&quot;')}">
+          <img src="${e.src}" alt="${e.name}" loading="lazy"/>
+          <div class="gallery-cell-name">${e.name}</div>
+        </div>`).join('')}
+    </div>`;
+
+  wrap.querySelectorAll('[data-lightbox]').forEach(el=>{
+    el.addEventListener('click',()=> openLightbox((DB.photos||{})[el.dataset.lightbox], el.dataset.lightboxName));
+  });
+}
+
+// ── LIGHTBOX ─────────────────────────────────────────────────────────────────
+function openLightbox(src, name){
+  document.getElementById('lightbox-img').src  = src||'';
+  document.getElementById('lightbox-name').textContent = name||'';
+  document.getElementById('lightbox').classList.remove('hidden');
+}
+function closeLightbox(){
+  document.getElementById('lightbox').classList.add('hidden');
+  document.getElementById('lightbox-img').src='';
+}
+
+
+// ── RENAME ENGINE ─────────────────────────────────────────────────────────────
+// Long-press any element with class "renameable" and data-lbl="key" to rename it.
+// The new label is saved to LABELS[key] and persists across sessions.
+
+let renameHintTimeout = null;
+
+function makeRenameable(el){
+  if(el._renameWired) return;
+  el._renameWired = true;
+
+  let pressTimer = null;
+  let touchMoved = false;
+
+  function startPress(){
+    touchMoved = false;
+    pressTimer = setTimeout(()=>{
+      if(!touchMoved) triggerRename(el);
+    }, 600);
+  }
+  function cancelPress(){ clearTimeout(pressTimer); }
+
+  el.addEventListener('touchstart', startPress, {passive:true});
+  el.addEventListener('touchmove',  ()=>{ touchMoved=true; cancelPress(); }, {passive:true});
+  el.addEventListener('touchend',   cancelPress);
+  el.addEventListener('touchcancel',cancelPress);
+  // Desktop fallback
+  el.addEventListener('mousedown', startPress);
+  el.addEventListener('mouseup',   cancelPress);
+  el.addEventListener('mouseleave',cancelPress);
+}
+
+function triggerRename(el){
+  const key      = el.dataset.lbl;
+  const fallback = el.dataset.lblDefault || el.textContent.trim();
+  const current  = lbl(key, fallback);
+
+  // Replace content with an input
+  const origHTML = el.innerHTML;
+  const input = document.createElement('input');
+  input.className   = 'rename-input';
+  input.value       = current;
+  input.style.width = Math.max(60, current.length * 9) + 'px';
+  el.innerHTML = '';
+  el.appendChild(input);
+
+  // Tiny vibration feedback
+  if(navigator.vibrate) navigator.vibrate(30);
+
+  input.focus();
+  input.select();
+
+  function commit(){
+    const val = input.value.trim();
+    if(val && val !== fallback){
+      LABELS[key] = val;
+      saveLabels();
+    } else if(!val){
+      delete LABELS[key];
+      saveLabels();
+    }
+    // Re-render the current screen so the new label appears everywhere
+    renderCurrent();
+  }
+
+  input.addEventListener('blur',   commit);
+  input.addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); input.blur(); }
+    if(e.key==='Escape'){ input.value=fallback; input.blur(); }
+    // resize as you type
+    input.style.width = Math.max(60, input.value.length * 9 + 18) + 'px';
+  });
+
+  // Stop propagation so click handlers don't fire
+  input.addEventListener('click',    e=>e.stopPropagation());
+  input.addEventListener('touchend', e=>e.stopPropagation());
+}
+
+// Attach to all renameable elements in the DOM now and after each render
+function wireRenameables(){
+  document.querySelectorAll('.renameable').forEach(makeRenameable);
+}
+
+// Show a one-time hint on first render
+let renameHintShown = false;
+function maybeShowRenameHint(){
+  if(renameHintShown || localStorage.getItem('depman_rename_hint_seen')) return;
+  renameHintShown = true;
+  localStorage.setItem('depman_rename_hint_seen','1');
+  let hint = document.getElementById('rename-hint');
+  if(!hint){
+    hint = document.createElement('div');
+    hint.id = 'rename-hint';
+    hint.className = 'rename-hint';
+    hint.textContent = 'Hold any button to rename it';
+    document.body.appendChild(hint);
+  }
+  setTimeout(()=> hint.classList.add('show'), 1200);
+  setTimeout(()=> hint.classList.remove('show'), 4000);
+}
+
+
+// ── RESOLVE LABELS after every render ────────────────────────────────────────
+// Replaces {placeholder} text in renameable buttons with current label values
+const LABEL_MAP = {
+  // nav
+  '{home}':         ['nav_home',    'Home'],
+  '{today}':        ['nav_today',   'Today'],
+  '{hero}':         ['nav_hero',    'Hero'],
+  '{cast}':         ['nav_cast',    'Cast'],
+  '{photos}':       ['nav_gallery', 'Photos'],
+  '{script}':       ['nav_script',  'Script'],
+  '{cal}':          ['nav_cal',     'Schedule'],
+  '{settings}':     ['nav_settings', 'Team'],
+  // home filters
+  '{f_all}':        ['f_all',       'All'],
+  '{f_hero}':       ['f_hero',      'Hero ★'],
+  '{f_animal}':     ['f_animal',    'Animals'],
+  '{f_fab}':        ['f_fab',       'In Fab'],
+  '{f_consumable}': ['f_consumable','Consumables'],
+  // action
+  '{btn_expand}':       ['btn_expand',      'Expand all'],
+  '{btn_addprop}':      ['btn_addprop',      '+ Add prop'],
+  '{btn_today_expand}': ['btn_today_expand', 'Expand all'],
+  '{btn_allvan}':       ['btn_allvan',       'All to Van'],
+  // hero filters
+  '{hf_all}':      ['hf_all',      'All'],
+  '{hf_fab}':      ['hf_fab',      'In Fab'],
+  '{hf_versions}': ['hf_versions', 'Versions'],
+  '{hf_animals}':  ['hf_animals',  'Animals'],
+};
+
+function resolveLabels(){
+  document.querySelectorAll('.renameable').forEach(el=>{
+    // Walk text nodes and replace {placeholder} tokens
+    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    let n;
+    while((n = walk.nextNode())) nodes.push(n);
+    nodes.forEach(node=>{
+      const orig = node.textContent;
+      let replaced = orig;
+      Object.entries(LABEL_MAP).forEach(([token, [key, fallback]])=>{
+        if(replaced.includes(token)) replaced = replaced.replace(token, lbl(key, fallback));
+      });
+      if(replaced !== orig) node.textContent = replaced;
+    });
+  });
+  // Also update bucket labels from LABELS
+  document.querySelectorAll('.bucket-name[data-lbl]').forEach(el=>{
+    el.textContent = lbl(el.dataset.lbl, el.dataset.lblDefault||el.textContent);
+  });
+  wireRenameables();
+  maybeShowRenameHint();
+}
+
+// ── SCRIPT VIEWER ─────────────────────────────────────────────────────────────
+const PDFJS_CDN    = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs';
+const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.mjs';
+const SCRIPT_IDB   = 'depman_script_pdf';
+
+let pdfDoc       = null;
+let pdfPageNum   = 1;
+let pdfRendering = false;
+let pdfPending   = null;
+let pdfScale     = 1.0;
+let pdfLoaded    = false;
+let pdfLib       = null;
+let scenePageMap = {};
+
+// active tools
+let activeTool   = null; // null | 'highlight' | 'annotate'
+let activeColor  = '#f5d300';
+let activeStroke = 3;
+let layers       = {};   // { pageNum: [ {type,data} ] }
+let currentLayer = 'My Notes';
+let showLargeSceneNums = false;
+let showSceneDividers  = false;
+let showRevisionColors = false;
+
+// ── IDB ───────────────────────────────────────────────────────────────────────
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('dht_db',2);
+    r.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains('files'))  db.createObjectStore('files');
+      if(!db.objectStoreNames.contains('layers')) db.createObjectStore('layers');
+    };
+    r.onsuccess=e=>res(e.target.result);
+    r.onerror  =e=>rej(e.target.error);
+  });
+}
+async function idbPut(store,key,val){ const db=await idbOpen(); return new Promise((res,rej)=>{ const tx=db.transaction(store,'readwrite'); tx.objectStore(store).put(val,key); tx.oncomplete=res; tx.onerror=rej; }); }
+async function idbGet(store,key){    const db=await idbOpen(); return new Promise((res,rej)=>{ const tx=db.transaction(store,'readonly'); const r=tx.objectStore(store).get(key); r.onsuccess=e=>res(e.target.result||null); r.onerror=rej; }); }
+async function idbDel(store,key){    const db=await idbOpen(); return new Promise((res,rej)=>{ const tx=db.transaction(store,'readwrite'); tx.objectStore(store).delete(key); tx.oncomplete=res; tx.onerror=rej; }); }
+
+async function saveLayers(){ await idbPut('layers','dht_layers', JSON.stringify({layers,currentLayer})); }
+async function loadLayers(){
+  const raw = await idbGet('layers','dht_layers');
+  if(raw){ const d=JSON.parse(raw); layers=d.layers||{}; currentLayer=d.currentLayer||'My Notes'; }
+}
+
+// ── PDF.js ────────────────────────────────────────────────────────────────────
+async function loadPDFJS(){
+  if(pdfLib) return pdfLib;
+  const mod = await import(PDFJS_CDN);
+  mod.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+  pdfLib = mod;
+  return mod;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+async function renderPage(num){
+  if(!pdfDoc) return;
+  if(pdfRendering){ pdfPending=num; return; }
+  pdfRendering=true;
+  pdfPageNum=num;
+
+  const page  = await pdfDoc.getPage(num);
+  const wrap  = document.getElementById('sc-canvas-wrap');
+  const canvas= document.getElementById('sc-canvas');
+  const ctx   = canvas.getContext('2d');
+  const wrapW = wrap.clientWidth || window.innerWidth;
+  const vp0   = page.getViewport({scale:1});
+  const auto  = wrapW / vp0.width;
+  const vp    = page.getViewport({scale: auto * pdfScale});
+
+  canvas.width=vp.width; canvas.height=vp.height;
+  await page.render({canvasContext:ctx,viewport:vp}).promise;
+
+  // draw layers on top
+  drawLayersOnCanvas(canvas, num, vp.width, vp.height, vp0.width, vp0.height);
+
+  // large scene numbers overlay
+  if(showLargeSceneNums){
+    const scNum = Object.entries(scenePageMap).find(([k,v])=>v===num)?.[0];
+    if(scNum){
+      ctx.save();
+      ctx.font=`bold ${Math.round(vp.width*0.12)}px monospace`;
+      ctx.fillStyle='rgba(245,211,0,0.18)';
+      ctx.textAlign='center';
+      ctx.fillText(scNum, vp.width/2, vp.height*0.15);
+      ctx.restore();
+    }
+  }
+
+  // scene dividers
+  if(showSceneDividers){
+    ctx.save();
+    ctx.strokeStyle='rgba(0,0,0,0.12)';
+    ctx.lineWidth=2;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();
+    ctx.moveTo(0, vp.height*0.05);
+    ctx.lineTo(vp.width, vp.height*0.05);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  pdfRendering=false;
+  document.getElementById('sc-page-info').textContent=`${num} / ${pdfDoc.numPages}`;
+  updateStripActive(num);
+  if(pdfPending!==null){ const p=pdfPending; pdfPending=null; renderPage(p); }
+}
+
+// ── Layer drawing ─────────────────────────────────────────────────────────────
+function drawLayersOnCanvas(canvas, pageNum, canvasW, canvasH, origW, origH){
+  const ctx   = canvas.getContext('2d');
+  const pageKey = String(pageNum);
+  const marks = layers[pageKey]||[];
+  const scaleX = canvasW/origW;
+  const scaleY = canvasH/origH;
+
+  marks.forEach(m=>{
+    if(m.layer && m.layer !== currentLayer && !m.visible) return;
+    ctx.save();
+    if(m.type==='highlight'){
+      ctx.globalAlpha=0.35;
+      ctx.fillStyle=m.color||'#f5d300';
+      ctx.fillRect(m.x*scaleX, m.y*scaleY, m.w*scaleX, m.h*scaleY);
+    } else if(m.type==='draw'){
+      ctx.globalAlpha=0.85;
+      ctx.strokeStyle=m.color||'#000';
+      ctx.lineWidth=(m.stroke||3)*pdfScale;
+      ctx.lineCap='round';
+      ctx.lineJoin='round';
+      ctx.beginPath();
+      m.pts.forEach((pt,i)=> i===0 ? ctx.moveTo(pt.x*scaleX,pt.y*scaleY) : ctx.lineTo(pt.x*scaleX,pt.y*scaleY));
+      ctx.stroke();
+    }
+    ctx.restore();
+  });
+}
+
+// ── Annotation canvas (overlay for drawing) ───────────────────────────────────
+let annotCanvas = null;
+let annotCtx    = null;
+let drawing     = false;
+let currentPath = [];
+let pageOrigW   = 0;
+let pageOrigH   = 0;
+
+function setupAnnotCanvas(){
+  if(annotCanvas) annotCanvas.remove();
+  const wrap = document.getElementById('sc-canvas-wrap');
+  const base = document.getElementById('sc-canvas');
+  annotCanvas = document.createElement('canvas');
+  annotCanvas.id = 'sc-annot-canvas';
+  annotCanvas.width  = base.width;
+  annotCanvas.height = base.height;
+  annotCanvas.style.cssText = `position:absolute;top:0;left:50%;transform:translateX(-50%);cursor:crosshair;touch-action:none`;
+  wrap.appendChild(annotCanvas);
+  annotCtx = annotCanvas.getContext('2d');
+
+  function getPos(e){
+    const rect = annotCanvas.getBoundingClientRect();
+    const touch = e.touches?.[0] || e.changedTouches?.[0] || e;
+    return { x:(touch.clientX-rect.left)*(annotCanvas.width/rect.width),
+             y:(touch.clientY-rect.top) *(annotCanvas.height/rect.height) };
+  }
+
+  function startDraw(e){ e.preventDefault(); drawing=true; currentPath=[]; const p=getPos(e); currentPath.push(p); }
+  function moveDraw(e){
+    e.preventDefault();
+    if(!drawing) return;
+    const p=getPos(e); currentPath.push(p);
+    annotCtx.clearRect(0,0,annotCanvas.width,annotCanvas.height);
+    annotCtx.save();
+    annotCtx.strokeStyle=activeColor; annotCtx.lineWidth=activeStroke; annotCtx.lineCap='round'; annotCtx.lineJoin='round';
+    annotCtx.beginPath();
+    currentPath.forEach((pt,i)=> i===0 ? annotCtx.moveTo(pt.x,pt.y) : annotCtx.lineTo(pt.x,pt.y));
+    annotCtx.stroke();
+    annotCtx.restore();
+  }
+  function endDraw(e){
+    if(!drawing||!currentPath.length) return;
+    drawing=false;
+    const pageKey=String(pdfPageNum);
+    if(!layers[pageKey]) layers[pageKey]=[];
+    // normalise to original PDF coords
+    const scaleX = pageOrigW / annotCanvas.width;
+    const scaleY = pageOrigH / annotCanvas.height;
+    layers[pageKey].push({ type:'draw', color:activeColor, stroke:activeStroke/pdfScale, layer:currentLayer, visible:true, pts:currentPath.map(p=>({x:p.x*scaleX,y:p.y*scaleY})) });
+    saveLayers();
+    renderPage(pdfPageNum);
+    annotCtx.clearRect(0,0,annotCanvas.width,annotCanvas.height);
+  }
+
+  annotCanvas.addEventListener('mousedown',  startDraw);
+  annotCanvas.addEventListener('mousemove',  moveDraw);
+  annotCanvas.addEventListener('mouseup',    endDraw);
+  annotCanvas.addEventListener('touchstart', startDraw, {passive:false});
+  annotCanvas.addEventListener('touchmove',  moveDraw,  {passive:false});
+  annotCanvas.addEventListener('touchend',   endDraw,   {passive:false});
+}
+
+// ── Highlight tool (drag a rect) ──────────────────────────────────────────────
+let hlStart = null;
+
+function setupHighlightCanvas(){
+  if(annotCanvas) annotCanvas.remove();
+  const wrap = document.getElementById('sc-canvas-wrap');
+  const base = document.getElementById('sc-canvas');
+  annotCanvas = document.createElement('canvas');
+  annotCanvas.id = 'sc-annot-canvas';
+  annotCanvas.width  = base.width;
+  annotCanvas.height = base.height;
+  annotCanvas.style.cssText = `position:absolute;top:0;left:50%;transform:translateX(-50%);cursor:text;touch-action:none`;
+  wrap.appendChild(annotCanvas);
+  annotCtx = annotCanvas.getContext('2d');
+
+  function getPos(e){
+    const rect=annotCanvas.getBoundingClientRect();
+    const touch=e.touches?.[0]||e.changedTouches?.[0]||e;
+    return {x:(touch.clientX-rect.left)*(annotCanvas.width/rect.width),
+            y:(touch.clientY-rect.top)*(annotCanvas.height/rect.height)};
+  }
+
+  function startHL(e){ e.preventDefault(); hlStart=getPos(e); }
+  function moveHL(e){
+    e.preventDefault();
+    if(!hlStart) return;
+    const p=getPos(e);
+    annotCtx.clearRect(0,0,annotCanvas.width,annotCanvas.height);
+    annotCtx.save();
+    annotCtx.globalAlpha=0.35; annotCtx.fillStyle=activeColor;
+    annotCtx.fillRect(hlStart.x,hlStart.y,p.x-hlStart.x,p.y-hlStart.y);
+    annotCtx.restore();
+  }
+  function endHL(e){
+    if(!hlStart) return;
+    const p=getPos(e);
+    const pageKey=String(pdfPageNum);
+    if(!layers[pageKey]) layers[pageKey]=[];
+    const scX=pageOrigW/annotCanvas.width, scY=pageOrigH/annotCanvas.height;
+    layers[pageKey].push({type:'highlight',color:activeColor,layer:currentLayer,visible:true,
+      x:hlStart.x*scX, y:hlStart.y*scY, w:(p.x-hlStart.x)*scX, h:(p.y-hlStart.y)*scY});
+    hlStart=null;
+    saveLayers();
+    renderPage(pdfPageNum);
+    annotCtx.clearRect(0,0,annotCanvas.width,annotCanvas.height);
+  }
+
+  annotCanvas.addEventListener('mousedown',  startHL);
+  annotCanvas.addEventListener('mousemove',  moveHL);
+  annotCanvas.addEventListener('mouseup',    endHL);
+  annotCanvas.addEventListener('touchstart', startHL, {passive:false});
+  annotCanvas.addEventListener('touchmove',  moveHL,  {passive:false});
+  annotCanvas.addEventListener('touchend',   endHL,   {passive:false});
+}
+
+function removeAnnotCanvas(){ if(annotCanvas){ annotCanvas.remove(); annotCanvas=null; } }
+
+function setTool(tool){
+  activeTool = tool;
+  removeAnnotCanvas();
+  document.querySelectorAll('.sc-tool-btn').forEach(b=>b.classList.toggle('active', b.dataset.tool===tool));
+  if(tool==='annotate')  setupAnnotCanvas();
+  if(tool==='highlight') setupHighlightCanvas();
+  // update canvas wrap touch-action
+  const wrap=document.getElementById('sc-canvas-wrap');
+  wrap.style.touchAction = tool ? 'none' : 'pinch-zoom pan-y';
+}
+
+// ── Layers panel ──────────────────────────────────────────────────────────────
+function openLayersPanel(){
+  const allLayerNames = ['My Notes', ...Object.keys(layers).flatMap(k=>layers[k].map(m=>m.layer)).filter((v,i,a)=>v&&a.indexOf(v)===i&&v!=='My Notes')];
+  const layerSet = [...new Set(['My Notes', ...allLayerNames])];
+
+  document.getElementById('modal-root').innerHTML=`
+    <div class="modal-bg" id="mbg">
+      <div class="modal" style="max-width:340px">
+        <div class="modal-title" style="margin-bottom:10px">Layers</div>
+        <div style="margin-bottom:12px">
+          ${layerSet.map(l=>`
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee">
+              <div style="flex:1;font-size:13px;font-weight:${l===currentLayer?'700':'400'}">${l}</div>
+              ${l===currentLayer?'<span style="font-size:10px;font-family:var(--mono);color:var(--green)">ACTIVE</span>':''}
+              <button class="modal-opt" style="padding:5px 10px;font-size:10px" onclick="currentLayer='${l}';closeModal();toast('Layer: ${l}')">Use</button>
+            </div>`).join('')}
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;opacity:0.4;font-family:var(--mono);margin-bottom:8px">Info Layers</div>
+          ${[
+            ['showLargeSceneNums','Large Scene Numbers'],
+            ['showSceneDividers', 'Scene Dividers'],
+            ['showRevisionColors','Revision Colors'],
+          ].map(([key,label])=>`
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #eee">
+              <span style="font-size:13px">${label}</span>
+              <button onclick="toggleInfoLayer('${key}')" style="width:44px;height:26px;border-radius:13px;border:var(--border);background:${eval(key)?'#000':'#fff'};color:${eval(key)?'#fff':'#000'};font-size:10px;font-family:var(--mono);font-weight:700;cursor:pointer" id="il-${key}">${eval(key)?'ON':'OFF'}</button>
+            </div>`).join('')}
+        </div>
+        <button class="modal-cancel" onclick="closeModal()">Close</button>
+      </div>
+    </div>`;
+  document.getElementById('mbg').addEventListener('click',e=>{ if(e.target.id==='mbg')closeModal(); });
+}
+
+function toggleInfoLayer(key){
+  if(key==='showLargeSceneNums') showLargeSceneNums=!showLargeSceneNums;
+  if(key==='showSceneDividers')  showSceneDividers=!showSceneDividers;
+  if(key==='showRevisionColors') showRevisionColors=!showRevisionColors;
+  const btn=document.getElementById('il-'+key);
+  if(btn){ const on=eval(key); btn.textContent=on?'ON':'OFF'; btn.style.background=on?'#000':'#fff'; btn.style.color=on?'#fff':'#000'; }
+  renderPage(pdfPageNum);
+}
+
+// ── Color picker ──────────────────────────────────────────────────────────────
+function openColorPicker(){
+  const colors=['#f5d300','#ff6b35','#00b894','#74b9ff','#fd79a8','#000000','#ffffff','#e17055'];
+  document.getElementById('modal-root').innerHTML=`
+    <div class="modal-bg" id="mbg">
+      <div class="modal" style="max-width:280px">
+        <div class="modal-title" style="margin-bottom:12px">Colour</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+          ${colors.map(c=>`<button onclick="activeColor='${c}';closeModal();toast('Colour set')" style="width:100%;aspect-ratio:1;border-radius:8px;border:${c===activeColor?'3px solid #000':'var(--border)'};background:${c};cursor:pointer"></button>`).join('')}
+        </div>
+        <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>`;
+  document.getElementById('mbg').addEventListener('click',e=>{ if(e.target.id==='mbg')closeModal(); });
+}
+
+// ── Page strip ────────────────────────────────────────────────────────────────
+async function buildPageStrip(){
+  const strip = document.getElementById('sc-page-strip');
+  strip.innerHTML='';
+  const total=Math.min(pdfDoc.numPages,150);
+  for(let i=1;i<=total;i++){
+    const thumb=document.createElement('div');
+    thumb.className='script-strip-thumb'; thumb.dataset.page=i;
+    const tc=document.createElement('canvas');
+    thumb.appendChild(tc); strip.appendChild(thumb);
+    thumb.addEventListener('click',()=>renderPage(i));
+    (async(n,c)=>{
+      const pg=await pdfDoc.getPage(n);
+      const vp=pg.getViewport({scale:36/pg.getViewport({scale:1}).width});
+      c.width=vp.width; c.height=vp.height;
+      await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+    })(i,tc);
+  }
+}
+
+function updateStripActive(num){
+  document.querySelectorAll('.script-strip-thumb').forEach(t=>t.classList.toggle('active',parseInt(t.dataset.page)===num));
+  document.querySelector('.script-strip-thumb.active')?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+}
+
+// ── Scene map ────────────────────────────────────────────────────────────────
+async function buildSceneMap(){
+  scenePageMap={};
+  for(let i=1;i<=pdfDoc.numPages;i++){
+    const pg=await pdfDoc.getPage(i);
+    const content=await pg.getTextContent();
+    const text=content.items.map(s=>s.str).join(' ');
+    const matches=text.matchAll(/(\d+[A-Z]?(?:\.\d+)?)\s+(?:INT|EXT|I\/E)/g);
+    for(const m of matches){ if(!scenePageMap[m[1]])scenePageMap[m[1]]=i; }
+    const vp=pg.getViewport({scale:1}); pageOrigW=vp.width; pageOrigH=vp.height;
+  }
+}
+
+// ── Gestures: pinch-zoom + swipe ─────────────────────────────────────────────
+function setupGestures(){
+  const wrap=document.getElementById('sc-canvas-wrap');
+  let lastDist=null, startX=null;
+
+  wrap.addEventListener('touchstart',e=>{
+    if(activeTool) return;
+    if(e.touches.length===2) lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    else if(e.touches.length===1) startX=e.touches[0].clientX;
+  },{passive:true});
+
+  wrap.addEventListener('touchmove',e=>{
+    if(activeTool||e.touches.length!==2||!lastDist) return;
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    pdfScale=Math.min(4,Math.max(0.5,pdfScale*(d/lastDist)));
+    lastDist=d; renderPage(pdfPageNum);
+  },{passive:true});
+
+  wrap.addEventListener('touchend',e=>{
+    lastDist=null;
+    if(activeTool||!startX||e.touches.length>0) return;
+    const dx=e.changedTouches[0].clientX-startX;
+    if(Math.abs(dx)>60){
+      if(dx<0 && pdfPageNum<pdfDoc?.numPages) renderPage(pdfPageNum+1);
+      else if(dx>0 && pdfPageNum>1)           renderPage(pdfPageNum-1);
+    }
+    startX=null;
+  },{passive:true});
+
+  // double-tap to reset zoom
+  let lastTap=0;
+  wrap.addEventListener('touchend',e=>{
+    if(activeTool) return;
+    const now=Date.now();
+    if(now-lastTap<300){ pdfScale=1.0; renderPage(pdfPageNum); }
+    lastTap=now;
+  },{passive:true});
+}
+
+// ── Search ───────────────────────────────────────────────────────────────────
+async function doSearch(q){
+  const res=document.getElementById('sc-search-results');
+  if(!q.trim()){ res.style.display='none'; return; }
+  res.style.display='block';
+  res.innerHTML='<div class="script-search-result" style="opacity:0.4">Searching…</div>';
+  const results=[];
+  for(let i=1;i<=pdfDoc.numPages;i++){
+    const pg=await pdfDoc.getPage(i);
+    const content=await pg.getTextContent();
+    const text=content.items.map(s=>s.str).join(' ');
+    if(text.toLowerCase().includes(q.toLowerCase())){
+      const idx=text.toLowerCase().indexOf(q.toLowerCase());
+      results.push({page:i,snippet:text.slice(Math.max(0,idx-20),idx+50).replace(/\s+/g,' ')});
+      if(results.length>=15) break;
+    }
+  }
+  if(!results.length){ res.innerHTML='<div class="script-search-result" style="opacity:0.4">No results</div>'; return; }
+  res.innerHTML=results.map(r=>`<div class="script-search-result" data-page="${r.page}"><span class="sr-page">p.${r.page}</span><span class="sr-text">${r.snippet}</span></div>`).join('');
+  res.querySelectorAll('[data-page]').forEach(el=>el.addEventListener('click',()=>{ renderPage(parseInt(el.dataset.page)); res.style.display='none'; }));
+}
+
+// ── Jump to scene from elsewhere in app ──────────────────────────────────────
+function jumpToScene(sceneNum){
+  if(!pdfLoaded){ showScreen('script'); toast('Load script first'); return; }
+  const pg=scenePageMap[sceneNum]||scenePageMap[sceneNum.split('.')[0]];
+  if(pg){ showScreen('script'); renderPage(pg); toast('Scene '+sceneNum+' → p.'+pg); }
+  else  { showScreen('script'); toast('Searching scene '+sceneNum+'…'); doSearch(sceneNum).then(()=>{}); }
+}
+
+// ── Load PDF from ArrayBuffer ────────────────────────────────────────────────
+async function loadPDFBuffer(buffer){
+  const lib=await loadPDFJS();
+  pdfDoc=await lib.getDocument({data:buffer}).promise;
+  pdfLoaded=true;
+
+  // get original page dimensions from page 1
+  const pg1=await pdfDoc.getPage(1);
+  const vp1=pg1.getViewport({scale:1});
+  pageOrigW=vp1.width; pageOrigH=vp1.height;
+
+  document.getElementById('script-upload-state').style.display='none';
+  document.getElementById('script-viewer-state').style.display='block';
+
+  await idbPut('files',SCRIPT_IDB,'pdf_stored');
+  // store the actual buffer
+  await idbPut('files',SCRIPT_IDB+'_buf', buffer.slice(0));
+
+  await renderPage(1);
+  buildPageStrip();
+  buildSceneMap(); // async bg scan
+}
+
+async function loadScriptFile(file){
+  const buf=await file.arrayBuffer();
+  await loadPDFBuffer(buf);
+  toast('Script loaded — '+pdfDoc.numPages+' pages');
+}
+
+function resetScriptViewer(){
+  pdfDoc=null; pdfLoaded=false; pdfPageNum=1; pdfScale=1; scenePageMap={};
+  layers={}; removeAnnotCanvas();
+  document.getElementById('script-upload-state').style.display='block';
+  document.getElementById('script-viewer-state').style.display='none';
+  document.getElementById('script-upload-label').textContent='Tap to load script PDF';
+  document.getElementById('script-drop-zone').classList.remove('has-file');
+  idbDel('files',SCRIPT_IDB); idbDel('files',SCRIPT_IDB+'_buf');
+}
+
+// ── Init script screen ────────────────────────────────────────────────────────
+async function initScriptScreen(){
+  await loadLayers();
+
+  const dropZone =document.getElementById('script-drop-zone');
+  const fileInput=document.getElementById('script-file-input');
+
+  dropZone.addEventListener('click',()=>fileInput.click());
+  dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover');});
+  dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop',e=>{ e.preventDefault(); dropZone.classList.remove('dragover'); const f=e.dataTransfer.files[0]; if(f)loadScriptFile(f); });
+  fileInput.addEventListener('change',()=>{ if(fileInput.files[0])loadScriptFile(fileInput.files[0]); });
+
+  // page nav
+  document.getElementById('sc-btn-prev').addEventListener('click',()=>{ if(pdfPageNum>1)renderPage(pdfPageNum-1); });
+  document.getElementById('sc-btn-next').addEventListener('click',()=>{ if(pdfDoc&&pdfPageNum<pdfDoc.numPages)renderPage(pdfPageNum+1); });
+
+  // search
+  document.getElementById('sc-btn-search').addEventListener('click',()=>{
+    const bar=document.getElementById('sc-search-bar');
+    const show=bar.style.display==='none';
+    bar.style.display=show?'block':'none';
+    if(show) document.getElementById('sc-search-input').focus();
+  });
+  let st; document.getElementById('sc-search-input').addEventListener('input',e=>{ clearTimeout(st); st=setTimeout(()=>doSearch(e.target.value),400); });
+
+  // close
+  document.getElementById('sc-btn-close').addEventListener('click',()=>{ if(confirm('Remove script from device?'))resetScriptViewer(); });
+
+  // tool buttons
+  document.getElementById('sc-btn-layers').addEventListener('click',  openLayersPanel);
+  document.getElementById('sc-btn-color').addEventListener('click',   openColorPicker);
+  document.getElementById('sc-btn-highlight').addEventListener('click',()=>setTool(activeTool==='highlight'?null:'highlight'));
+  document.getElementById('sc-btn-annotate').addEventListener('click', ()=>setTool(activeTool==='annotate' ?null:'annotate'));
+  document.getElementById('sc-btn-undo').addEventListener('click',()=>{
+    const k=String(pdfPageNum);
+    if(layers[k]?.length){ layers[k].pop(); saveLayers(); renderPage(pdfPageNum); }
+  });
+
+  setupGestures();
+
+  // resume PDF from IDB
+  const stored=await idbGet('files',SCRIPT_IDB+'_buf');
+  if(stored){
+    try{
+      await loadPDFBuffer(stored);
+      document.getElementById('script-drop-zone').classList.add('has-file');
+      document.getElementById('script-upload-label').textContent='Script loaded';
+    }catch(e){ console.log('Could not resume PDF',e); }
+  }
+}
+
+
+// ── CALLSHEET CALENDAR ────────────────────────────────────────────────────────
+// DB.callsheets = { 'YYYY-MM-DD': { sd, date, loc, generalCall, scenes,
+//   crew:[{dept,call}], extras, animals, sfx, weather, notes, raw } }
+
+const CS_KEY = 'depman_callsheets';
+let calViewMode   = 'month'; // 'month' | 'list'
+let calScreenMonth = null;   // {year, month} currently displayed
+let calSelectedDate = null;
+
+function saveCallsheets(){ try{ localStorage.setItem(CS_KEY, JSON.stringify(DB.callsheets||{})); }catch(e){} }
+function loadCallsheets(){
+  try{ const r=localStorage.getItem(CS_KEY); if(r) DB.callsheets=JSON.parse(r); else DB.callsheets={}; }catch(e){ DB.callsheets={}; }
+}
+
+// ── Parse callsheet PDF with Claude ──────────────────────────────────────────
+async function parseCallsheet(file, onDone){
+  const b64 = await readFileAsBase64(file);
+  // Use Gemini for callsheet parsing
+  const raw = await callGemini([
+    pdfPart(b64, 'CALLSHEET'),
+    textPart(`Extract all information from this film production callsheet into JSON only. No markdown, no explanation.
+
+{
+  "date": "YYYY-MM-DD",
+  "sd": 1,
+  "loc": "Main location name",
+  "generalCall": "07:00",
+  "unit": "Main Unit",
+  "scenes": ["1","2","3A"],
+  "weather": "Sunny 18°C",
+  "sunrise": "05:42",
+  "sunset": "21:10",
+  "crew": [
+    {"dept": "Props", "call": "06:30"},
+    {"dept": "Camera", "call": "07:00"},
+    {"dept": "Art Dept", "call": "06:00"},
+    {"dept": "Costume", "call": "06:00"},
+    {"dept": "Make-up", "call": "05:30"},
+    {"dept": "Director", "call": "07:00"}
+  ],
+  "cast": [
+    {"name": "Karl", "actor": "Actor Name", "call": "07:30", "makeup": "06:30", "costume": "07:00"}
+  ],
+  "extras": 25,
+  "animals": "2 dogs",
+  "sfx": "Rain machine sc.3",
+  "notes": "Any special notes, safety briefings, or important reminders from the callsheet",
+  "nearestHospital": "Hospital name and address if listed"
+}
+
+If a field is not on the callsheet use null. Extract every department call time you can find.`)
+  ], 2000);
+  const clean = raw.replace(/```json\s*/,'').replace(/```\s*/,'').replace(/\s*```$/,'').trim();
+  let parsed;
+  try{ parsed=JSON.parse(clean); }
+  catch(e){ const m=raw.match(/\{[\s\S]*\}/); if(m) parsed=JSON.parse(m[0]); else throw new Error('Could not parse response'); }
+  onDone(parsed);
+}
+
+// ── Calendar grid render ──────────────────────────────────────────────────────
+function renderCalScreen(){
+  const body = document.getElementById('cal-screen-body');
+  if(calViewMode==='list'){ renderCalList(body); return; }
+  renderCalMonth(body);
+}
+
+function getCalMonthDefault(){
+  // default to the month containing SD1, or current month
+  const days = ALL_DAYS();
+  if(days.length){
+    const d = new Date(days[0].date);
+    return {year:d.getFullYear(), month:d.getMonth()};
+  }
+  const now = new Date();
+  return {year:now.getFullYear(), month:now.getMonth()};
+}
+
+function renderCalMonth(body){
+  if(!calScreenMonth) calScreenMonth = getCalMonthDefault();
+  const {year, month} = calScreenMonth;
+  const today = new Date().toISOString().slice(0,10);
+  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const prevDays = new Date(year, month, 0).getDate();
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DOWS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+
+  // Build SD lookup: date→sd
+  const dateToSd = {};
+  (ALL_DAYS()).forEach(d=>dateToSd[d.date]=d.sd);
+  const cs = DB.callsheets||{};
+
+  // cells: pad from Monday (ISO week)
+  const startPad = (firstDay+6)%7; // Mon=0
+  let cells = '';
+
+  // prev month padding
+  for(let i=startPad-1;i>=0;i--){
+    cells += `<div class="cal-cell-wrap other-month"><div class="cal-date-num">${prevDays-i}</div></div>`;
+  }
+
+  // this month
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const sd      = dateToSd[dateStr];
+    const hasCs   = !!cs[dateStr];
+    const isToday = dateStr===today;
+    const isSel   = dateStr===calSelectedDate;
+    cells += `<div class="cal-cell-wrap${hasCs?' has-cs':''}${isToday?' today-cell':''}${isSel?' today-cell':''}" data-date="${dateStr}" style="${isSel?'outline:2px solid #000;outline-offset:-2px':''}">
+      ${hasCs?'<div class="cal-has-callsheet"></div>':''}
+      <div class="cal-date-num">${d}</div>
+      ${sd?`<div class="cal-sd-badge">SD${sd}</div>`:''}
+    </div>`;
+  }
+
+  // next month padding to complete grid
+  const totalCells = startPad + daysInMonth;
+  const remainder  = totalCells%7===0 ? 0 : 7-(totalCells%7);
+  for(let i=1;i<=remainder;i++){
+    cells += `<div class="cal-cell-wrap other-month"><div class="cal-date-num">${i}</div></div>`;
+  }
+
+  body.innerHTML = `
+    <div class="cal-month-nav">
+      <button class="cal-month-arrow" id="cal-prev-month">◀</button>
+      <div class="cal-month-title">${MONTH_NAMES[month]} ${year}</div>
+      <button class="cal-month-arrow" id="cal-next-month">▶</button>
+    </div>
+    <div class="cal-grid">
+      ${DOWS.map(d=>`<div class="cal-dow">${d}</div>`).join('')}
+      ${cells}
+    </div>
+    <div id="cal-day-panel" class="cal-day-panel${calSelectedDate?' open':''}"></div>`;
+
+  // wire month nav
+  document.getElementById('cal-prev-month').addEventListener('click',()=>{
+    calScreenMonth = month===0 ? {year:year-1,month:11} : {year,month:month-1};
+    renderCalScreen();
+  });
+  document.getElementById('cal-next-month').addEventListener('click',()=>{
+    calScreenMonth = month===11 ? {year:year+1,month:0} : {year,month:month+1};
+    renderCalScreen();
+  });
+
+  // wire cell clicks
+  body.querySelectorAll('[data-date]').forEach(el=>el.addEventListener('click',()=>{
+    calSelectedDate = el.dataset.date;
+    renderCalScreen(); // re-render to show selection + open panel
+  }));
+
+  // render day panel if selected
+  if(calSelectedDate) renderDayPanel(document.getElementById('cal-day-panel'), calSelectedDate);
+}
+
+// ── List view ────────────────────────────────────────────────────────────────
+function renderCalList(body){
+  const days = ALL_DAYS();
+  const cs   = DB.callsheets||{};
+  const today = new Date().toISOString().slice(0,10);
+
+  if(!days.length){
+    body.innerHTML='<div style="padding:40px 20px;text-align:center;opacity:0.3;font-size:12px;font-family:var(--mono)">No shoot days loaded</div>';
+    return;
+  }
+
+  body.innerHTML = days.map(d=>{
+    const data   = cs[d.date];
+    const isToday= d.date===today;
+    return `<div class="cal-day-panel" style="display:block;margin-bottom:8px${isToday?';border-color:#000;border-width:2px':''}">
+      <div class="cal-day-panel-head" data-list-date="${d.date}" style="cursor:pointer">
+        <div>
+          <div class="cal-day-panel-title">SD${d.sd} · ${data?.loc||d.loc||'—'}</div>
+          <div class="cal-day-panel-sub">${d.label||d.date}${data?' · Callsheet loaded':' · No callsheet'}</div>
+        </div>
+        <span style="font-size:18px">${data?'📋':'○'}</span>
+      </div>
+      <div id="list-body-${d.date}" style="display:none"></div>
+    </div>`;
+  }).join('');
+
+  body.querySelectorAll('[data-list-date]').forEach(el=>el.addEventListener('click',()=>{
+    const date  = el.dataset.listDate;
+    const panel = document.getElementById('list-body-'+date);
+    if(panel.style.display==='none'){
+      panel.style.display='block';
+      calSelectedDate=date;
+      renderDayPanel(panel, date);
+    } else { panel.style.display='none'; }
+  }));
+}
+
+// ── Day detail panel ─────────────────────────────────────────────────────────
+function renderDayPanel(container, dateStr){
+  const cs   = (DB.callsheets||{})[dateStr];
+  const sd   = (ALL_DAYS()).find(d=>d.date===dateStr);
+  const title= sd ? `SD${sd.sd} · ${dateStr}` : dateStr;
+
+  const uploadSection = `
+    <div>
+      <input type="file" id="cs-file-${dateStr}" accept=".pdf,application/pdf" style="display:none"/>
+      <button class="cs-upload-btn" id="cs-upload-btn-${dateStr}">
+        <span class="cs-upload-icon">📋</span>
+        <span class="cs-upload-text">${cs?'Replace callsheet PDF':'Upload callsheet PDF'}</span>
+      </button>
+      <div id="cs-parsing-${dateStr}" style="display:none">
+        <div class="cs-parsing"><div class="cs-spinner"></div>Reading callsheet…</div>
+      </div>
+    </div>`;
+
+  const csDetails = cs ? `
+    <div class="cs-block">
+      <div class="cs-block-title">Overview</div>
+      ${cs.unit?`<div class="cs-row"><span class="cs-row-label">Unit</span><span class="cs-row-val">${cs.unit}</span></div>`:''}
+      ${cs.loc?`<div class="cs-row"><span class="cs-row-label">Location</span><span class="cs-row-val">${cs.loc}</span></div>`:''}
+      ${cs.generalCall?`<div class="cs-row"><span class="cs-row-label">General Call</span><span class="cs-row-val" style="font-weight:700;font-size:15px;font-family:var(--mono)">${cs.generalCall}</span></div>`:''}
+      ${cs.weather?`<div class="cs-row"><span class="cs-row-label">Weather</span><span class="cs-row-val">${cs.weather}</span></div>`:''}
+      ${cs.sunrise||cs.sunset?`<div class="cs-row"><span class="cs-row-label">Sun</span><span class="cs-row-val">↑${cs.sunrise||'—'} ↓${cs.sunset||'—'}</span></div>`:''}
+    </div>
+    ${cs.scenes?.length?`<div class="cs-block">
+      <div class="cs-block-title">Scenes</div>
+      <div class="cs-scenes-list">${cs.scenes.map(s=>`<span class="cs-scene-chip">${s}</span>`).join('')}</div>
+    </div>`:''}
+    ${cs.crew?.length?`<div class="cs-block">
+      <div class="cs-block-title">Call Times</div>
+      ${cs.crew.map(c=>`<div class="cs-row"><span class="cs-row-label">${c.dept}</span><span class="cs-row-val" style="font-family:var(--mono);font-weight:700">${c.call||'—'}</span></div>`).join('')}
+    </div>`:''}
+    ${cs.cast?.length?`<div class="cs-block">
+      <div class="cs-block-title">Cast</div>
+      ${cs.cast.map(c=>`<div class="cs-row" style="flex-direction:column;align-items:flex-start;border-bottom:1px solid #eee;padding-bottom:6px;margin-bottom:6px">
+        <div style="font-weight:700;font-size:12px">${c.name}${c.actor?` <span style="font-weight:400;opacity:0.5">(${c.actor})</span>`:''}</div>
+        <div style="font-size:10px;font-family:var(--mono);opacity:0.6;margin-top:2px">Call ${c.call||'—'} · M/U ${c.makeup||'—'} · Costume ${c.costume||'—'}</div>
+      </div>`).join('')}
+    </div>`:''}
+    <div class="cs-block">
+      <div class="cs-block-title">Special Requirements</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
+        ${cs.extras?`<span class="cs-tag extras">👥 ${cs.extras} extras</span>`:''}
+        ${cs.animals?`<span class="cs-tag animals">🐾 ${cs.animals}</span>`:''}
+        ${cs.sfx?`<span class="cs-tag sfx">💥 ${cs.sfx}</span>`:''}
+      </div>
+      ${cs.notes?`<div style="font-size:11px;line-height:1.6;opacity:0.7;font-family:var(--mono);background:#f9f9f9;border-radius:6px;padding:8px">${cs.notes}</div>`:''}
+      ${cs.nearestHospital?`<div class="cs-row" style="margin-top:8px"><span class="cs-row-label">Hospital</span><span class="cs-row-val" style="font-size:11px">${cs.nearestHospital}</span></div>`:''}
+    </div>
+    <button style="background:#fff;border:1px solid #ddd;color:#999;font-size:10px;font-family:var(--mono);padding:6px 10px;border-radius:6px;cursor:pointer;width:100%" id="cs-delete-${dateStr}">Remove callsheet</button>
+  ` : '<div style="font-size:11px;font-family:var(--mono);opacity:0.4;text-align:center;padding:16px 0">No callsheet loaded for this day</div>';
+
+  container.innerHTML = `<div class="cal-day-body">${uploadSection}${csDetails}</div>`;
+
+  // wire upload
+  const btn = document.getElementById(`cs-upload-btn-${dateStr}`);
+  const inp = document.getElementById(`cs-file-${dateStr}`);
+  btn.addEventListener('click',()=>inp.click());
+  inp.addEventListener('change',async ()=>{
+    const file = inp.files[0]; if(!file) return;
+    const parsing = document.getElementById(`cs-parsing-${dateStr}`);
+    btn.style.display='none'; parsing.style.display='block';
+    try{
+      await parseCallsheet(file, parsed=>{
+        if(!DB.callsheets) DB.callsheets={};
+        // use the date from the callsheet if we don't already know it
+        const useDate = parsed.date && parsed.date!=='null' ? parsed.date : dateStr;
+        DB.callsheets[useDate] = {...parsed, date:useDate};
+        saveCallsheets(); toast('Callsheet loaded ✓'); renderCalScreen();
+      });
+    }catch(e){
+      parsing.style.display='none'; btn.style.display='flex';
+      toast('Error: '+e.message);
+    }
+  });
+
+  // wire delete
+  const del = document.getElementById(`cs-delete-${dateStr}`);
+  if(del) del.addEventListener('click',()=>{
+    if(!confirm('Remove callsheet?')) return;
+    delete DB.callsheets[dateStr]; saveCallsheets(); renderCalScreen();
+  });
+}
+
+
+// ── ONBOARDING ────────────────────────────────────────────────────────────────
+let obFiles    = {breakdown:null, script:null, schedule:null};
+let obDept     = 'Props';
+let obStep     = 'landing';
+
+function obShowStep(step){
+  obStep = step;
+  document.querySelectorAll('.ob-step').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById('ob-step-'+step);
+  if(el){ el.classList.add('active'); el.scrollTop=0; }
+}
+
+function obLog(msg, type='working'){
+  const log = document.getElementById('ob-parse-log');
+  if(!log) return;
+  const icons = {ok:'✓',working:'›',err:'✗'};
+  const div = document.createElement('div');
+  div.className='ob-log-line '+type;
+  div.innerHTML=`<span class="ob-log-dot">${icons[type]||'›'}</span><span>${msg}</span>`;
+  log.appendChild(div); log.scrollTop=log.scrollHeight;
+}
+
+function obSetupDropzone(type){
+  const drop  = document.getElementById('ob-drop-'+type);
+  const input = document.getElementById('ob-input-'+type);
+  const lbl   = document.getElementById('ob-lbl-'+type);
+  const badge = document.getElementById('ob-badge-'+type);
+
+  function setFile(file){
+    if(!file) return;
+    obFiles[type]=file;
+    drop.classList.add('done');
+    drop.querySelector('div').textContent='✓';
+    lbl.textContent = file.name.length>30 ? file.name.slice(0,27)+'…' : file.name;
+    if(badge){ badge.textContent='✓ Ready'; badge.className='ob-upload-badge ready'; }
+    document.getElementById('ob-upload-parse').disabled = !obFiles.breakdown;
+  }
+
+  drop.addEventListener('click',   ()=>input.click());
+  input.addEventListener('change', ()=>setFile(input.files[0]));
+  drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
+  drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');setFile(e.dataTransfer.files[0]);});
+}
+
+// Gemini API — free tier, reads PDFs natively
+const GEMINI_KEY = 'AIzaSyAKPY0ua_kM5EZ4xBuW-8983pHTI8Bfr5U';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+
+async function callGemini(parts, maxTokens=8000){
+  for(let attempt=1; attempt<=3; attempt++){
+    const resp = await fetch(GEMINI_URL+'?key='+GEMINI_KEY, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        contents:[{parts}],
+        generationConfig:{maxOutputTokens:maxTokens, temperature:0.1}
+      })
+    });
+    if(resp.status===503||resp.status===429){
+      obLog(`API busy, retrying (${attempt}/3)…`,'working');
+      await new Promise(r=>setTimeout(r, 3000*attempt));
+      continue;
+    }
+    if(!resp.ok){ const e=await resp.json(); throw new Error(e.error?.message||'API error '+resp.status); }
+    const data = await resp.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+  throw new Error('API overloaded — try again in a minute');
+}
+
+// Convert base64 PDF to Gemini inline_data part
+function pdfPart(b64, title){
+  return {inline_data:{mime_type:'application/pdf', data:b64}};
+}
+function textPart(text){ return {text}; }
+
+// Wrapper so existing code works unchanged
+async function callClaude(messages, maxTokens=8000){
+  // Convert Claude message format to Gemini parts
+  const parts = [];
+  const msg = messages[0];
+  if(Array.isArray(msg.content)){
+    msg.content.forEach(c=>{
+      if(c.type==='document') parts.push(pdfPart(c.source.data, c.title));
+      else if(c.type==='text') parts.push(textPart(c.text));
+    });
+  } else {
+    parts.push(textPart(msg.content));
+  }
+  const text = await callGemini(parts, maxTokens);
+  // Return in Claude response format so existing parsing code works
+  return {content:[{type:'text', text}]};
+}
+
+async function obRunParse(){
+  obShowStep('parsing');
+  document.getElementById('ob-parse-log').innerHTML='';
+  obLog('Reading files from device…');
+
+  try{
+    const dept = obDept;
+
+    // ── STEP 1: Parse breakdown (always) ─────────────────────────────────────
+    obLog('Breakdown: '+obFiles.breakdown.name+' ('+Math.round(obFiles.breakdown.size/1024)+'KB)');
+    const b64bd  = await readFileAsBase64(obFiles.breakdown);
+    const isPDF  = obFiles.breakdown.name.toLowerCase().endsWith('.pdf');
+    const bdPart = isPDF
+      ? {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64bd},title:'BREAKDOWN'}
+      : {type:'text',text:`[BREAKDOWN SPREADSHEET: ${obFiles.breakdown.name}]`};
+
+    obLog('Sending breakdown to Claude…');
+    document.getElementById('ob-parse-title').textContent='Reading breakdown…';
+
+    const bdPrompt = {type:'text',text:`You are a film production assistant for the ${dept} department.
+Extract ALL items from this breakdown into JSON only. No markdown, no explanation.
+
+{
+  "production": {"title":"string","director":"string or null"},
+  "props": [
+    {"id":"p001","name":"Item name","tags":["hero","animal","sfx","fab","consumable"],"scenes":["1","2"],"character":"CharacterName or null","state":"warehouse","notes":"or null","versions":null}
+  ],
+  "cast": {
+    "CharacterName": {"actor":"name or null","props":["p001"]}
+  },
+  "scenes": {
+    "1": {"loc":"Location","int_ext":"INT","time_of_day":"DAY","description":"brief","props":["item name"]}
+  }
+}
+
+Tags: hero=story-critical/multiple-versions, animal=live animal, sfx=special effect, fab=needs fabrication, consumable=food/drink/disposable.
+Extract EVERY SINGLE item. Be exhaustive. Consolidate duplicates (same item multiple scenes = one entry with scenes array).`};
+
+    const bdData = await callClaude([{role:'user',content:[bdPart, bdPrompt]}], 8000);
+    const bdRaw  = bdData.content.map(c=>c.text||'').join('');
+    const bdClean= bdRaw.replace(/^```json\s*/,'').replace(/^```/,'').replace(/```$/,'').trim();
+    let bdParsed;
+    try{ bdParsed=JSON.parse(bdClean); }
+    catch(e){ const m=bdRaw.match(/\{[\s\S]*\}/); if(m)bdParsed=JSON.parse(m[0]); else throw new Error('Could not parse breakdown response'); }
+
+    obLog(`Breakdown: ${(bdParsed.props||[]).length} items, ${Object.keys(bdParsed.scenes||{}).length} scenes`,'ok');
+
+    // ── STEP 2: Parse schedule (separate call if provided) ────────────────────
+    let scheduleParsed = null;
+    if(obFiles.schedule){
+      obLog('Schedule: '+obFiles.schedule.name+' ('+Math.round(obFiles.schedule.size/1024)+'KB)');
+      document.getElementById('ob-parse-title').textContent='Reading schedule…';
+      const b64sc  = await readFileAsBase64(obFiles.schedule);
+      const sPDF   = obFiles.schedule.name.toLowerCase().endsWith('.pdf');
+      const scPart = sPDF
+        ? {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64sc},title:'SHOOTING SCHEDULE'}
+        : {type:'text',text:`[SCHEDULE: ${obFiles.schedule.name}]`};
+
+      const scPrompt = {type:'text',text:`Extract shoot days from this schedule into JSON only. No markdown.
+{"days":[{"sd":1,"date":"YYYY-MM-DD or null","label":"Mon 01/01","loc":"Main location","scenes":["1","2","3"]}]}`};
+
+      const scData   = await callClaude([{role:'user',content:[scPart, scPrompt]}], 3000);
+      const scRaw    = scData.content.map(c=>c.text||'').join('');
+      const scClean  = scRaw.replace(/^```json\s*/,'').replace(/^```/,'').replace(/```$/,'').trim();
+      try{ scheduleParsed=JSON.parse(scClean); }
+      catch(e){ const m=scRaw.match(/\{[\s\S]*\}/); if(m)scheduleParsed=JSON.parse(m[0]); }
+      obLog(`Schedule: ${(scheduleParsed?.days||[]).length} shoot days`,'ok');
+    }
+
+    // ── STEP 3: Parse script for hero context (separate call if provided) ─────
+    let scriptParsed = null;
+    if(obFiles.script){
+      obLog('Script: '+obFiles.script.name+' ('+Math.round(obFiles.script.size/1024)+'KB)');
+      document.getElementById('ob-parse-title').textContent='Reading script for hero items…';
+      const b64sc  = await readFileAsBase64(obFiles.script);
+      const scPart = {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64sc},title:'SCRIPT'};
+
+      const heroPrompt = {type:'text',text:`From this script, identify which props/items are story-critical HERO items.
+Return JSON only: {"heroItems":["exact item name as in breakdown","another item"],"notes":{"item name":"why it's hero"}}`};
+
+      const heroData  = await callClaude([{role:'user',content:[scPart, heroPrompt]}], 2000);
+      const heroRaw   = heroData.content.map(c=>c.text||'').join('');
+      const heroClean = heroRaw.replace(/^```json\s*/,'').replace(/^```/,'').replace(/```$/,'').trim();
+      try{ scriptParsed=JSON.parse(heroClean); }
+      catch(e){ const m=heroRaw.match(/\{[\s\S]*\}/); if(m)scriptParsed=JSON.parse(m[0]); }
+      obLog(`Script: ${(scriptParsed?.heroItems||[]).length} hero items identified`,'ok');
+
+      // Merge hero tags from script into props
+      if(scriptParsed?.heroItems){
+        (bdParsed.props||[]).forEach(p=>{
+          const isHero = scriptParsed.heroItems.some(h=>
+            p.name.toLowerCase().includes(h.toLowerCase()) || h.toLowerCase().includes(p.name.toLowerCase())
+          );
+          if(isHero && !(p.tags||[]).includes('hero')){ p.tags=[...(p.tags||[]),'hero']; }
+          if(scriptParsed.notes?.[p.name]) p.notes = scriptParsed.notes[p.name];
+        });
+      }
+    }
+
+    // ── STEP 4: Merge everything into DB ──────────────────────────────────────
+    obLog('Building workspace…');
+    document.getElementById('ob-parse-title').textContent='Almost done…';
+
+    // Build DB from merged results
+    DB.props   = (bdParsed.props||[]).map(p=>({...p,id:p.id||uid(),state:'warehouse',tags:p.tags||[],scenes:p.scenes||[]}));
+    DB.days    = scheduleParsed?.days||[];
+    DB.scenes  = bdParsed.scenes||{};
+    DB.meta    = { title: document.getElementById('ob-title').value||bdParsed.production?.title||'Production',
+                   director: document.getElementById('ob-director').value||bdParsed.production?.director||'',
+                   username: document.getElementById('ob-username').value||'',
+                   department: dept };
+    DB.castProps = {};
+    if(bdParsed.cast){
+      Object.entries(bdParsed.cast).forEach(([char,data])=>{
+        const charProps=(data.props||[]).map(pid=>DB.props.find(x=>x.id===pid)).filter(Boolean);
+        DB.castProps[char]={actor:data.actor||null,props:charProps};
+      });
+    }
+    DB.setup=true;
+    DB.heroVersionStates={}; DB.castPropStates={}; DB.castPropPacked={};
+    DB.todayPacked={}; DB.todayLoc={}; DB._ts={};
+
+    saveLocal();
+
+    const heroCount=(DB.props||[]).filter(p=>(p.tags||[]).includes('hero')).length;
+    obLog(`${DB.props.length} items · ${DB.days.length} shoot days · ${heroCount} hero items`,'ok');
+    obLog('Workspace ready ✓','ok');
+
+    setTimeout(()=>launchApp(), 600);
+
+  }catch(e){
+    obLog('Error: '+e.message,'err');
+    document.getElementById('ob-parse-title').textContent='Something went wrong';
+    document.getElementById('ob-spinner').style.display='none';
+    const retry=document.createElement('button');
+    retry.className='ob-btn'; retry.style.marginTop='16px'; retry.textContent='← Back to upload';
+    retry.addEventListener('click',()=>obShowStep('upload'));
+    document.querySelector('#ob-step-parsing .ob-body').appendChild(retry);
+  }
+}
+
+function launchApp(){
+  // hide onboarding
+  document.getElementById('onboard-wrapper').classList.add('hidden');
+  document.getElementById('app').style.display='block';
+  document.querySelector('.nav').style.display='flex';
+
+  // update header
+  const dept  = DB.meta?.department||'Props';
+  const title = DB.meta?.title||'Production';
+  document.getElementById('clap-label').textContent = title+' · '+dept;
+  document.getElementById('sync-btn').style.display='block';
+
+  // auto-detect today
+  const todayStr=new Date().toISOString().slice(0,10);
+  const matchDay=DB.days?.find(d=>d.date===todayStr);
+  if(matchDay) currentSd=matchDay.sd; else currentSd=1;
+
+  showScreen('home');
+  renderSettings(); // pre-populate settings screen
+}
+
+function downloadApp(){
+  // Detect any iOS/iPadOS device — covers Safari, Chrome, all browsers
+  const ua = navigator.userAgent;
+  const isIOS = /ipad|iphone|ipod/i.test(ua) ||
+                (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) ||
+                (navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform));
+
+  if(isIOS){
+    // iOS (Safari or Chrome) cannot download files at all.
+    // Show a clear explanation instead of silently failing.
+    document.getElementById('modal-root').innerHTML=`
+      <div class="modal-bg" id="mbg">
+        <div class="modal" style="max-width:340px">
+          <div style="font-size:18px;margin-bottom:8px">📱 iPhone &amp; iPad</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px">Can't download files on iOS</div>
+          <div style="font-size:12px;line-height:1.8;margin-bottom:16px;font-family:var(--mono);background:#f5f5f5;border-radius:8px;padding:12px">
+            <strong>iPad &amp; iPhone can't download files.</strong><br>
+            Install the app instead — it works the same way:<br><br>
+            <span style="opacity:0.5">In Safari:</span><br>
+            1. Tap the <strong>Share ↑</strong> button in the toolbar<br>
+            2. Tap <strong>Add to Home Screen</strong><br>
+            3. Tap <strong>Add</strong><br><br>
+            <span style="opacity:0.5">In Chrome:</span><br>
+            1. Tap <strong>⋯</strong> menu top right<br>
+            2. Tap <strong>Add to Home Screen</strong><br><br>
+            <span style="opacity:0.4">Opens fullscreen, works offline, looks like a real app.</span>
+          </div>
+          <button class="modal-cancel" onclick="closeModal()">Got it</button>
+        </div>
+      </div>`;
+    document.getElementById('mbg').addEventListener('click',e=>{ if(e.target.id==='mbg')closeModal(); });
+  } else {
+    const src  = document.documentElement.outerHTML;
+    const blob = new Blob([src], {type:'text/html'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'DepMan_v21.html';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Downloaded ✓');
+  }
+}
+
+function initOnboarding(){
+  // landing
+  document.getElementById('ob-landing-start').addEventListener('click',()=>obShowStep('info'));
+  document.getElementById('ob-landing-download').addEventListener('click',()=>{
+    const el  = document.getElementById('ob-install-instructions');
+    const lnk = document.getElementById('ob-landing-download');
+    const open = el.style.display==='none';
+    el.style.display = open ? 'block' : 'none';
+    lnk.textContent = open ? 'How to install as an app ↑' : 'How to install as an app ↓';
+  });
+
+  // info step
+  const titleInp=document.getElementById('ob-title');
+  titleInp.addEventListener('input',()=>{
+    document.getElementById('ob-info-next').disabled=!titleInp.value.trim();
+  });
+  document.getElementById('ob-info-next').addEventListener('click',()=>obShowStep('dept'));
+  document.getElementById('ob-info-back').addEventListener('click',()=>obShowStep('landing'));
+
+  // dept step
+  document.querySelectorAll('.ob-dept-btn').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('.ob-dept-btn').forEach(x=>x.classList.remove('selected'));
+    b.classList.add('selected'); obDept=b.dataset.dept;
+  }));
+  document.getElementById('ob-dept-next').addEventListener('click',()=>obShowStep('upload'));
+  document.getElementById('ob-dept-back').addEventListener('click',()=>obShowStep('info'));
+
+  // upload step
+  obSetupDropzone('breakdown');
+  obSetupDropzone('script');
+  obSetupDropzone('schedule');
+  document.getElementById('ob-upload-parse').addEventListener('click',obRunParse);
+  document.getElementById('ob-upload-back').addEventListener('click',()=>obShowStep('dept'));
+}
+
+
+// ── SETTINGS + QR ─────────────────────────────────────────────────────────────
+// QR code drawn on canvas using a minimal pure-JS QR library
+// We use the qrcode-generator library from CDN (MIT licence)
+
+const QR_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+let qrLibLoaded = false;
+
+async function loadQRLib(){
+  if(qrLibLoaded) return;
+  await new Promise((res,rej)=>{
+    const s=document.createElement('script'); s.src=QR_CDN;
+    s.onload=()=>{ qrLibLoaded=true; res(); }; s.onerror=rej;
+    document.head.appendChild(s);
+  });
+}
+
+// ── Production code: hash of title+bin so same prod always = same code ────────
+function getProductionCode(){
+  if(DB.meta?.productionCode) return DB.meta.productionCode;
+  // Generate once, save it
+  const code = Math.random().toString(36).slice(2,8).toUpperCase();
+  if(!DB.meta) DB.meta={};
+  DB.meta.productionCode = code;
+  saveLocal();
+  return code;
+}
+
+function getJoinURL(){
+  const code = getProductionCode();
+  const base = window.location.href.split('?')[0].split('#')[0];
+  return `${base}?join=${code}&bin=${BIN_ID}`;
+}
+
+// ── Draw QR on canvas ─────────────────────────────────────────────────────────
+async function drawQR(url){
+  await loadQRLib();
+  const qr = qrcode(0, 'M');
+  qr.addData(url);
+  qr.make();
+
+  const canvas  = document.getElementById('qr-canvas');
+  const ctx     = canvas.getContext('2d');
+  const modules = qr.getModuleCount();
+  const size    = 200;
+  const cell    = size / modules;
+
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0,0,size,size);
+  ctx.fillStyle = '#000';
+
+  for(let r=0;r<modules;r++){
+    for(let c=0;c<modules;c++){
+      if(qr.isDark(r,c)){
+        ctx.fillRect(Math.floor(c*cell), Math.floor(r*cell), Math.ceil(cell), Math.ceil(cell));
+      }
+    }
+  }
+}
+
+// ── Show QR modal ─────────────────────────────────────────────────────────────
+async function showQRModal(){
+  const url  = getJoinURL();
+  const code = getProductionCode();
+  const prod = DB.meta?.title||'Production';
+
+  document.getElementById('qr-modal').classList.remove('hidden');
+  document.getElementById('qr-prod-name').textContent = prod+' · Scan to join';
+  document.getElementById('qr-code-text').textContent = code;
+
+  try{
+    await drawQR(url);
+  }catch(e){
+    document.getElementById('qr-canvas').style.display='none';
+    document.getElementById('qr-code-text').textContent = url;
+    toast('QR library unavailable — share the link manually');
+  }
+}
+
+// ── Handle ?join= URL param (someone scanned the QR) ─────────────────────────
+function checkJoinURL(){
+  const params = new URLSearchParams(window.location.search);
+  const joinCode = params.get('join');
+  const binId    = params.get('bin');
+  if(!joinCode) return false;
+
+  // Store the join config so we connect to the right production bin
+  if(!DB.meta) DB.meta={};
+  DB.meta.productionCode = joinCode;
+  if(binId) DB.meta.joinBinId = binId;
+
+  // Show the join flow: skip to department select in onboarding
+  // but pre-fill that they're joining an existing production
+  DB.meta.isJoining = true;
+  return true;
+}
+
+// ── Render settings screen ────────────────────────────────────────────────────
+function renderSettings(){
+  const meta = DB.meta||{};
+  const el   = id => document.getElementById(id);
+
+  if(el('set-prod-title')) el('set-prod-title').textContent = meta.title||'—';
+  if(el('set-dept-name'))  el('set-dept-name').textContent  = meta.department||'—';
+  if(el('set-username'))   el('set-username').textContent   = meta.username||'—';
+
+  const code = getProductionCode();
+  if(el('set-prod-code-sub')) el('set-prod-code-sub').textContent = code;
+
+  const syncOk = navigator.onLine;
+  if(el('set-sync-status')) el('set-sync-status').textContent = syncOk ? 'Online — ready to sync' : 'Offline — local only';
+}
+
+// ── Init settings ─────────────────────────────────────────────────────────────
+function initSettings(){
+
+  // QR button
+  document.getElementById('set-show-qr').addEventListener('click', showQRModal);
+
+  // QR modal close + share
+  document.getElementById('qr-close-btn').addEventListener('click',()=>
+    document.getElementById('qr-modal').classList.add('hidden'));
+  document.getElementById('qr-share-btn').addEventListener('click',()=>{
+    const url = getJoinURL();
+    if(navigator.share){
+      navigator.share({ title:'Join '+( DB.meta?.title||'Production')+' on DepMan', url });
+    } else {
+      navigator.clipboard?.writeText(url).then(()=>toast('Link copied ✓'));
+    }
+  });
+
+  // Copy code
+  document.getElementById('set-copy-code').addEventListener('click',()=>{
+    const code = getProductionCode();
+    navigator.clipboard?.writeText(getJoinURL()).then(()=>toast('Join link copied ✓'))
+      .catch(()=>toast('Code: '+code));
+  });
+
+  // Edit production title
+  document.getElementById('set-edit-prod').addEventListener('click',()=>{
+    const val = prompt('Production title:', DB.meta?.title||'');
+    if(val?.trim()){ DB.meta.title=val.trim(); saveLocal();
+      document.getElementById('clap-label').textContent=val.trim()+' · '+(DB.meta.department||'Props');
+      renderSettings(); toast('Updated'); }
+  });
+
+  // Edit name
+  document.getElementById('set-edit-name').addEventListener('click',()=>{
+    const val = prompt('Your name:', DB.meta?.username||'');
+    if(val?.trim()){ DB.meta.username=val.trim(); saveLocal(); renderSettings(); toast('Updated'); }
+  });
+
+  // Change dept
+  document.getElementById('set-change-dept').addEventListener('click',()=>{
+    const depts=['Props','Costume','Make-up','Locations','Art Dept','SFX'];
+    const icons ={Props:'🎭',Costume:'👗','Make-up':'💄',Locations:'📍','Art Dept':'🖼',SFX:'💥'};
+    document.getElementById('modal-root').innerHTML=`
+      <div class="modal-bg" id="mbg">
+        <div class="modal" style="max-width:320px">
+          <div class="modal-title" style="margin-bottom:12px">Change Department</div>
+          ${depts.map(d=>`<button class="modal-opt${d===DB.meta?.department?' active':''}" data-dept="${d}">${icons[d]} ${d}</button>`).join('')}
+          <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+        </div>
+      </div>`;
+    document.getElementById('mbg').addEventListener('click',e=>{ if(e.target.id==='mbg')closeModal(); });
+    document.querySelectorAll('[data-dept]').forEach(b=>b.addEventListener('click',()=>{
+      DB.meta.department=b.dataset.dept; saveLocal();
+      document.getElementById('clap-label').textContent=(DB.meta.title||'Production')+' · '+b.dataset.dept;
+      closeModal(); renderSettings(); toast('Department: '+b.dataset.dept);
+    }));
+  });
+
+  // Sync toggle
+  let bgSync = localStorage.getItem('depman_bgsync')!=='off';
+  const syncToggle = document.getElementById('set-sync-toggle');
+  if(syncToggle){ syncToggle.textContent=bgSync?'On':'Off'; syncToggle.addEventListener('click',()=>{
+    bgSync=!bgSync; localStorage.setItem('depman_bgsync',bgSync?'on':'off');
+    syncToggle.textContent=bgSync?'On':'Off'; toast('Background sync '+(bgSync?'on':'off'));
+  }); }
+
+  // Sync now
+  document.getElementById('set-sync-now').addEventListener('click',()=>{ manualSync(); });
+
+  // Download
+  document.getElementById('set-download').addEventListener('click', downloadApp);
+
+  // Reset
+  document.getElementById('set-reset').addEventListener('click',()=>{
+    if(!confirm('Reset ALL data? This cannot be undone.')) return;
+    localStorage.clear();
+    location.reload();
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init(){
+  initOnboarding();
+  initSettings();
+  if(checkJoinURL()) obShowStep('dept'); // scanned QR
+
+  // Check for existing setup — skip onboarding
+  const hadLocal = loadLocal();
+  loadPhotos(); loadLabels(); loadCallsheets();
+  if(hadLocal && DB.setup && (DB.props||[]).length > 0){
+    launchApp();
+    if(navigator.onLine) loadDB();
+    return;
+  }
+
+  // wire all nav + listeners FIRST before any async work
+  document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>showScreen(b.dataset.screen)));
+  document.querySelectorAll('[data-f]').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('[data-f]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');homeFilter=b.dataset.f;renderHome();
+  }));
+  document.getElementById('home-expand').addEventListener('click',()=>{document.querySelectorAll('.bucket').forEach(b=>b.classList.add('open'));});
+  document.getElementById('home-add').addEventListener('click',()=>{
+    addPropModal(newProp=>{
+      if(!DB.props)DB.props=[];
+      DB.props.push(newProp);tsSet('prop_'+newProp.id);scheduleSave();renderHome();toast('Prop added');
+    });
+  });
+  document.getElementById('home-search').addEventListener('input',renderHome);
+  document.getElementById('prev-day').addEventListener('click',()=>{if(currentSd>1){currentSd--;renderToday();}});
+  document.getElementById('next-day').addEventListener('click',()=>{if(currentSd<33){currentSd++;renderToday();}});
+  document.getElementById('cal-toggle').addEventListener('click',()=>{
+    calOpen=!calOpen;
+    document.getElementById('cal-container').style.display=calOpen?'block':'none';
+    if(calOpen){const d=ALL_DAYS().find(x=>x.sd===currentSd);calMonth=d&&new Date(d.date).getMonth()===5?1:0;buildCal();}
+    renderToday();
+  });
+  document.getElementById('today-expand').addEventListener('click',()=>{document.querySelectorAll('.scene-block').forEach(s=>s.classList.add('open'));});
+  document.getElementById('today-allvan').addEventListener('click',()=>{
+    const day=ALL_DAYS().find(d=>d.sd===currentSd)||ALL_DAYS()[0];
+    (day.scenes||[]).forEach(sc=>{(SCENE_PROPS()[sc]||[]).forEach((_,i)=>{const k=`${day.sd}_${sc}_${i}`;if(!DB.todayLoc)DB.todayLoc={};DB.todayLoc[k]='van';});});
+    scheduleSave();renderToday();toast('All moved to Van');
+  });
+  document.querySelectorAll('[data-hf]').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('[data-hf]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');heroFilter=b.dataset.hf;renderHero();
+  }));
+  document.getElementById('hero-search').addEventListener('input',renderHero);
+
+  // script screen
+  initScriptScreen();
+
+  // callsheet calendar view toggle
+  document.getElementById('cal-view-toggle').addEventListener('click',()=>{
+    calViewMode = calViewMode==='month'?'list':'month';
+    document.getElementById('cal-view-toggle').textContent = calViewMode==='month'?'List view':'Month view';
+    renderCalScreen();
+  });
+
+  // lightbox
+  document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+  document.getElementById('lightbox').addEventListener('click', e=>{ if(e.target.id==='lightbox')closeLightbox(); });
+
+  // auto-detect today's shoot day
+  const todayStr=new Date().toISOString().slice(0,10);
+  const matchDay=ALL_DAYS().find(d=>d.date===todayStr);
+  if(matchDay)currentSd=matchDay.sd;
+
+  // data already loaded above if returning user
+  // fresh setup: seed data not needed since AI will populate
+
+  // 2. If nothing in local storage at all, seed the prop list right now
+  if(!DB.props||DB.props.length===0){
+    DB.props=[
+      {id:uid(),name:"Hannes' suitcase A — 1962 pristine",tags:['hero'],scenes:['4','5'],state:'set'},
+      {id:uid(),name:"Hannes' suitcase B — 1979 aged",tags:['hero'],scenes:['8','19','20','21','49','67','68','72','87'],state:'set'},
+      {id:uid(),name:"Hannes' suitcase C — pried open",tags:['hero'],scenes:['87'],state:'set'},
+      {id:uid(),name:"Hannes' suitcase D — interior dressed",tags:['hero'],scenes:['68'],state:'set'},
+      {id:uid(),name:'Birthday crown — child (patina)',tags:['hero'],scenes:['49','50','51'],state:'set'},
+      {id:uid(),name:'Birthday crown — adult (aged)',tags:['hero'],scenes:['56','57'],state:'set'},
+      {id:uid(),name:'Birthday crown — 1980 (very aged)',tags:['hero'],scenes:['134'],state:'set'},
+      {id:uid(),name:'Birthday crown — stunt + backup',tags:['hero'],scenes:['52'],state:'set'},
+      {id:uid(),name:'8mm film reel — Libelle footage',tags:['hero','fab'],scenes:['87','90','96','111','113','116'],state:'warehouse'},
+      {id:uid(),name:'8mm projector + dia machine',tags:['hero','fab'],scenes:['111','113'],state:'warehouse'},
+      {id:uid(),name:'Gettoni telefonici (200+)',tags:['hero'],scenes:['29','30','81','85','99','101','107','109','110A'],state:'van'},
+      {id:uid(),name:'Snow globe — breakaway × 3',tags:['hero'],scenes:['33'],state:'set'},
+      {id:uid(),name:'Snow globe — hero cracked × 2',tags:['hero'],scenes:['34'],state:'set'},
+      {id:uid(),name:'Farewell note × 6 (in coffee tin)',tags:['hero'],scenes:['80.1'],state:'set'},
+      {id:uid(),name:'Moka pot × 3 (spits first drops)',tags:['hero'],scenes:['118'],state:'set'},
+      {id:uid(),name:"Klaus' bicycle 1968",tags:['hero','fab'],scenes:['91'],state:'warehouse'},
+      {id:uid(),name:"Klaus' bicycle 1979 with rack",tags:['hero','fab'],scenes:['20','127'],state:'warehouse'},
+      {id:uid(),name:"Klaus' bicycle 1980 — broken",tags:['hero','fab'],scenes:['128','134'],state:'warehouse'},
+      {id:uid(),name:'Cassette player (working, batteries)',tags:['hero'],scenes:['121','122'],state:'set'},
+      {id:uid(),name:"The Police cassette — music licence ★",tags:['hero'],scenes:['8'],state:'set'},
+      {id:uid(),name:'Yellow post-its — Italian words (200+)',tags:['hero'],scenes:['24B','28','31','33'],state:'set'},
+      {id:uid(),name:"Évi's bunny + cage",tags:['animal'],scenes:['16','55','59.1'],state:'set'},
+      {id:uid(),name:'3 Silkie chickens',tags:['animal'],scenes:['16','16A'],state:'set'},
+      {id:uid(),name:'Trained chicken on car bonnet',tags:['animal','hero'],scenes:['40B'],state:'set'},
+      {id:uid(),name:"Aja's suitcase DRY",tags:['hero'],scenes:['46','47','56','57','116A','117'],state:'set'},
+      {id:uid(),name:"Aja's suitcase WET",tags:['hero'],scenes:['52'],state:'set'},
+      {id:uid(),name:"Aja's bicycle (submerged stunt rig)",tags:['hero'],scenes:['27'],state:'set'},
+      {id:uid(),name:"Maria's bag",tags:[],scenes:['2','3','4','5','6','8','20'],state:'set'},
+      {id:uid(),name:"Therese's bag / travel bag",tags:[],scenes:['8','20','46','47','48','52','56','57'],state:'set'},
+      {id:uid(),name:"Therese's alarm clock — 03:45",tags:['hero'],scenes:['77','78','78B'],state:'set'},
+      {id:uid(),name:"Zigi's big black suitcase × 2-3",tags:['hero'],scenes:['26','94','129','130','131','132','133'],state:'set'},
+      {id:uid(),name:"Aja's graduation speech × 5",tags:['hero'],scenes:['12'],state:'set'},
+      {id:uid(),name:'Old Italian newspapers (10-15/take)',tags:['consumable'],scenes:['48'],state:'van'},
+      {id:uid(),name:'Toilet paper rolls × 20+ (no imprints)',tags:['hero','consumable'],scenes:['50'],state:'set'},
+      {id:uid(),name:'Klitoris drawing 1673 — Georg Ludwig Kobelt',tags:['hero'],scenes:['28','31','33'],state:'set'},
+      {id:uid(),name:"Gray's Anatomy 1901 page",tags:['hero'],scenes:['28'],state:'set'},
+      {id:uid(),name:"Pope Johannes Paul I mugs × 20",tags:['hero'],scenes:['32','33','118'],state:'set'},
+      {id:uid(),name:"Envelope + 2 golden clips + 8mm film",tags:['hero'],scenes:['87','90','96','111A'],state:'set'},
+      {id:uid(),name:"Italian love letters × 20 (handwritten)",tags:['hero','fab'],scenes:['68'],state:'set'},
+      {id:uid(),name:"Trevi Fountain Polaroid (Hannes + Italian woman 1966)",tags:['hero','fab'],scenes:['68','70','70A'],state:'set'},
+      {id:uid(),name:"Hannes Bartfink brochure + foldable map",tags:['hero','fab'],scenes:['68'],state:'set'},
+      {id:uid(),name:"Photo Aja + Libelle",tags:['hero'],scenes:['121','122'],state:'set'},
+      {id:uid(),name:"Handrail (stunt — Zigi pulls out of wall)",tags:['hero'],scenes:['94'],state:'set'},
+      {id:uid(),name:"Karl's notebook",tags:['hero'],scenes:['81','107','109','110A'],state:'set'},
+      {id:uid(),name:"Karl's shoes — box-fresh (continuity)",tags:['hero'],scenes:['76'],state:'set'},
+      {id:uid(),name:"Wall telephone W48/W61 Bundespost",tags:['hero'],scenes:['100','108','110','111','123','126','128'],state:'set'},
+      {id:uid(),name:"EMT kit — Tommy Dassler Köln",tags:['hero'],scenes:['38'],state:'set'},
+      {id:uid(),name:"Company sign + truck tarp 'Spedition Hannes Bartfink'",tags:[],scenes:['20','21'],state:'set'},
+    ];
+    saveLocal();           // save seed to localStorage immediately
+    if(navigator.onLine) pushToServer(); // push to server if we can
+  } else if(!hadLocal) {
+    // had data from server (loaded in loadDB below) but not yet local — save it
+    saveLocal();
+  }
+
+  // 3. Paint immediately with whatever we have (seed or local)
+  showScreen('home');
+
+  // 4. If online, sync with server in background — merge + repaint
+  if(navigator.onLine){
+    loadDB(); // non-blocking — will re-render when done
+  } else {
+    setSyncStatus('offline', 'Offline — local only');
+  }
+}
+
+
+// ── PWA ───────────────────────────────────────────────────────────────────────
+
+// Inline manifest — injected as a blob so no separate file needed
+(function injectManifest(){
+  const manifest = {
+    name: 'DepMan — Production Manager',
+    short_name: 'DepMan',
+    description: 'Department management for film & TV productions',
+    start_url: './',
+    display: 'standalone',
+    background_color: '#ffffff',
+    theme_color: '#111111',
+    orientation: 'portrait',
+    icons: [
+      {
+        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%23111'/%3E%3Crect x='0' y='0' width='192' height='28' fill='url(%23s)'/%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='%23000'/%3E%3Cstop offset='0.5' stop-color='%23f5d300'/%3E%3Cstop offset='1' stop-color='%23000'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ctext x='96' y='125' font-family='monospace' font-size='80' font-weight='bold' fill='%23f5d300' text-anchor='middle'%3E★%3C/text%3E%3C/svg%3E",
+        sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable'
+      },
+      {
+        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23111'/%3E%3Crect x='0' y='0' width='512' height='72' fill='url(%23s)'/%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='%23000'/%3E%3Cstop offset='0.5' stop-color='%23f5d300'/%3E%3Cstop offset='1' stop-color='%23000'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ctext x='256' y='330' font-family='monospace' font-size='220' font-weight='bold' fill='%23f5d300' text-anchor='middle'%3E★%3C/text%3E%3C/svg%3E",
+        sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable'
+      }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  document.getElementById('pwa-manifest').href = url;
+})();
+
+// Service worker — cached inline as a blob URL
+(function registerSW(){
+  if(!('serviceWorker' in navigator)) return;
+  const swCode = `
+const CACHE = 'dht-props-v1';
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(clients.claim());
+});
+self.addEventListener('fetch', e => {
+  // network first for API calls, cache first for app shell
+  if(e.request.url.includes('jsonbin.io') || e.request.url.includes('fonts.goog')){
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+  } else {
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      }))
+    );
+  }
+});
+  `;
+  const blob = new Blob([swCode], {type:'application/javascript'});
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl, {scope:'./'})
+    .then(() => console.log('DHT Props SW registered'))
+    .catch(e => console.log('SW reg failed (normal in dev):', e.message));
+})();
+
+// PWA: no install banner — Add to Home Screen instructions are on landing page
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+init();
+</script>
+</body>
+</html>
